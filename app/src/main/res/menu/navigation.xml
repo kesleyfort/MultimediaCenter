@@ -12,10 +12,6 @@
         android:title="Video" />
 
     <item
-        android:id="@+id/nav_deezer"
-        android:icon="@drawable/deezer"
-        android:title="Deezer" />
-    <item
         android:id="@+id/nav_home"
         android:icon="@drawable/home"
         android:title="Home" />

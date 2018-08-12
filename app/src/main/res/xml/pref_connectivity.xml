@@ -4,28 +4,20 @@
     tools:context=".MainActivity">
 
     <SwitchPreference
-        android:id="@+id/btswitch"
         android:defaultValue="false"
         android:icon="@drawable/bluetooth"
-        android:key="switch_wifi"
-        android:onClick="onSwitchClicked"
+        android:key="switch_bt"
         android:title="@string/pref_conn_bluetooth" />
     <SwitchPreference
-        android:id="@+id/wifiswitch"
         android:defaultValue="false"
         android:icon="@drawable/wifi"
-        android:key="switch_bt"
+        android:key="switch_wifi"
         android:onClick="onSwitchWifiClicked"
         android:title="@string/pref_conn_wifi" />
     <Preference
-        android:id="@+id/botaodisp"
         android:key="textbt"
-        android:onClick="onSearchDevicesClicked"
-        android:title="@string/text_conn_bluetooth"></Preference>
+        android:title="@string/text_conn_bluetooth" />
     <Preference
         android:key="textwifi"
-        android:id="@+id/botaowifinet"
-        android:onClick="onSearchWifiClicked"
-        android:title="@string/text_conn_wifi">
-    </Preference>
+        android:title="@string/text_conn_wifi"></Preference>
 </PreferenceScreen>

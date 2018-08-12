@@ -1,26 +1,18 @@
 package kalves.multimediacenter
 
 import android.annotation.TargetApi
-import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.media.RingtoneManager
 import android.net.Uri
-import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Vibrator
 import android.preference.*
-import android.provider.Settings
+import android.preference.Preference
+import android.support.v4.app.NavUtils
 import android.text.TextUtils
 import android.view.MenuItem
-import android.support.v4.app.NavUtils
-import android.view.View
-import android.widget.Switch
-import android.preference.SwitchPreference
-
-
 
 /**
  * A [PreferenceActivity] that presents a set of application settings. On
@@ -38,6 +30,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
         super.onCreate(savedInstanceState)
         setupActionBar()
     }
+
     /**
      * Set up the [android.app.ActionBar], if the API is available.
      */
@@ -268,70 +261,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                             .getDefaultSharedPreferences(preference.context)
                             .getString(preference.key, ""))
         }
-    }
 
-    fun BluetoothSwitchOff() {
-        var REQUEST_ENABLE_BT = 1
-        val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (mBluetoothAdapter != null) {
-            if (mBluetoothAdapter.isEnabled) {
-                mBluetoothAdapter.disable()
-            }
-        }
     }
-
-    fun BluetoothSwitch() {
-        var REQUEST_ENABLE_BT = 1
-        val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (mBluetoothAdapter != null) {
-            if (!mBluetoothAdapter.isEnabled) {
-                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
-            }
-        }
-    }
-
-
-    fun WifiSwitch() {
-        val wifiManager = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiManager.isWifiEnabled = true
-    }
-    fun WifiSwitchOff() {
-        val wifiManager = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiManager.isWifiEnabled = false
-    }
-
-    fun onSwitchClicked(v: View) {
-        //Is the switch on?
-        val on = (v as Switch).isChecked
-
-        if (on) {
-            BluetoothSwitch()
-        } else {
-            BluetoothSwitchOff()
-        }
-    }
-
-    fun onSearchDevicesClicked() {
-        val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
-        if (intent.resolveActivity(packageManager) != null) {
-            startActivity(intent)
-        }
-    }
-    fun onSearchWifiClicked() {
-        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-        if (intent.resolveActivity(packageManager) != null) {
-            startActivity(intent)
-        }
-    }
-    fun onSwitchWifiClicked(v: View) {
-        val on = (v as Switch).isChecked
-
-        if (on) {
-            WifiSwitch()
-        } else {
-            WifiSwitchOff()
-        }
-    }
-
 }
+
