@@ -264,7 +264,7 @@
                         app:layout_constraintVertical_bias="0.872" />
 
                     <Button
-                        android:id="@+id/stopMusicButton"
+                        android:id="@+id/stopButton"
                         android:layout_width="70dp"
                         android:layout_height="35dp"
                         android:layout_marginEnd="8dp"
@@ -274,7 +274,7 @@
                         android:text="Stop"
                         android:textColor="@android:color/white"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/VideoSelectFile"
+                        app:layout_constraintEnd_toStartOf="@+id/musicSelectFile"
                         app:layout_constraintHorizontal_bias="0.0"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
@@ -347,7 +347,7 @@
                         app:srcCompat="@drawable/exo_controls_fullscreen_enter" />
 
                     <Button
-                        android:id="@+id/VideoSelectFile"
+                        android:id="@+id/musicSelectFile"
                         android:layout_width="115dp"
                         android:layout_height="30dp"
                         android:background="@color/design_default_color_primary"
@@ -369,7 +369,7 @@
                         android:text="Stop"
                         android:textColor="@android:color/white"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/VideoSelectFile" />
+                        app:layout_constraintEnd_toStartOf="@+id/musicSelectFile" />
                 </android.support.constraint.ConstraintLayout>
 
             </FrameLayout>
