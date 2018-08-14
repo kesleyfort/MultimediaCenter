@@ -23,7 +23,9 @@ import android.view.View
 import android.widget.*
 import kotlinx.android.synthetic.main.activity_main.*
 import wseemann.media.FFmpegMediaMetadataRetriever
-import android.R.attr.data
+import android.widget.SeekBar
+
+
 
 
 class MainActivity : AppCompatActivity() {
@@ -37,8 +39,17 @@ class MainActivity : AppCompatActivity() {
     private var selectfilesucess: Boolean = false
     private var musicpausedposition: Int = 0
     private val musicSeekBarUpdateHandler = Handler()
-    var songlist: MutableList<Uri?> = mutableListOf<Uri?>()
+    private var songlist: MutableList<Uri?> = mutableListOf<Uri?>()
     private var currentIndexSongList = 0
+    val mUpdateSeekbar = object : Runnable {
+        override fun run() {
+            musicseekBar.progress = mediaPlayer!!.getCurrentPosition()
+            musicSeekBarUpdateHandler.postDelayed(this, 500)
+            val currentposition = findViewById<TextView>(R.id.initialtimeMusic)
+            currentposition.text = ConvertMStoMinutes(mediaPlayer!!.currentPosition)
+        }
+    }
+
 
     //End Declare Variables
 
@@ -104,6 +115,24 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
+        var playMusicbutton = findViewById<ImageView>(R.id.playMusicButton)
+        playMusicbutton.isClickable = false
+        musicseekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser)
+                    if(mediaPlayer !=null)
+                    mediaPlayer!!.seekTo(progress)
+            }
+
+           override fun onStartTrackingTouch(seekBar: SeekBar) {
+
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+
+            }
+        })
+
     }
 
     fun bluetoothSwitchOff() {
@@ -176,19 +205,15 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == 111 && resultCode == RESULT_OK) {
-            if(data?.clipData!!.itemCount == 1){
-                val uri = data?.data
+            for (i in 0 until data?.clipData!!.itemCount) {
+                val uri = data?.clipData?.getItemAt(i)?.uri
                 songlist.add(uri)
-            }
-            else{
-                for (i in 0 until data?.clipData!!.itemCount) {
-                    val uri = data?.clipData?.getItemAt(i)?.uri
-                    songlist.add(uri)
 
-                }
             }
 
             selectfilesucess = true
+            var playMusicbutton = findViewById<ImageView>(R.id.playMusicButton)
+            playMusicbutton.isClickable = true
             updateMetaData()
         }
     }
@@ -227,7 +252,7 @@ class MainActivity : AppCompatActivity() {
             duration.text = ConvertMStoMinutes(mediaPlayer!!.duration)
             musicseekBar.max = mediaPlayer!!.duration
 
-        } else if (musicpausedposition != 0) {
+        } else if (selectfilesucess && musicpausedposition != 0) {
             mediaPlayer = MediaPlayer().apply {
                 setAudioStreamType(AudioManager.STREAM_MUSIC)
                 setDataSource(applicationContext, songlist[currentIndexSongList])
@@ -235,11 +260,37 @@ class MainActivity : AppCompatActivity() {
                 seekTo(musicpausedposition)
                 start()
             }
+            musicseekBar.max = mediaPlayer!!.duration
+            val musicDuration = findViewById<TextView>(R.id.finaltimeMusic)
+            musicDuration.text = ConvertMStoMinutes(mediaPlayer!!.duration)
             var playbutton = findViewById<ImageView>(R.id.playMusicButton)
             var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
             playbutton.visibility = View.GONE
             pausebutton.visibility = View.VISIBLE
         }
+        updateMetaData()
+
+
+        musicSeekBarUpdateHandler.postDelayed(mUpdateSeekbar, 0);
+        mediaPlayer!!.setOnCompletionListener {
+            if (currentIndexSongList < (songlist.size - 1)) {
+                currentIndexSongList += 1
+                playMusic()
+                //updateMetaData()
+                val musicdata = findViewById<TextView>(R.id.MusicData)
+                musicdata.text = "Index: $currentIndexSongList && List Size: ${songlist.size}"
+            }
+            else if (currentIndexSongList==(songlist.size - 1)) {
+                currentIndexSongList = 0
+                updateMetaData()
+                var playbutton = findViewById<ImageView>(R.id.playMusicButton)
+                var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
+                playbutton.visibility = View.VISIBLE
+                pausebutton.visibility = View.GONE
+
+            }
+        }
+
     }
 
     fun onPlayMusicClicked(v: View) {
@@ -247,46 +298,55 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onPauseMusicClicked(v: View) {
-        mediaPlayer!!.pause()
-        var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-        var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-        playbutton.visibility = View.VISIBLE
-        pausebutton.visibility = View.GONE
-        musicpausedposition = mediaPlayer!!.currentPosition
-    }
-
-    fun onStopMusicClicked(v: View) {
-        if (mediaPlayer!!.isPlaying) {
-            mediaPlayer!!.stop()
-            musicpausedposition = 0
-            currentIndexSongList=0
+        if(mediaPlayer!!.isPlaying) {
+            mediaPlayer!!.pause()
             var playbutton = findViewById<ImageView>(R.id.playMusicButton)
             var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
             playbutton.visibility = View.VISIBLE
             pausebutton.visibility = View.GONE
+            musicpausedposition = mediaPlayer!!.currentPosition
+
+            musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar);
+
+            //musicSeekBarUpdateHandler.removeCallbacks();
+        }
+    }
+
+    fun onStopMusicClicked(v: View) {
+        if (mediaPlayer!=null) {
+            if (mediaPlayer!!.isPlaying) {
+                mediaPlayer!!.release()
+                musicpausedposition = 0
+                currentIndexSongList = 0
+                var playbutton = findViewById<ImageView>(R.id.playMusicButton)
+                var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
+                playbutton.visibility = View.VISIBLE
+                pausebutton.visibility = View.GONE
+            }
         }
     }
 
     fun onNextMusicClicked(v: View) {
-            if (currentIndexSongList < (songlist.size - 1)) {
-                currentIndexSongList += 1
-                mediaPlayer!!.release()
-                musicpausedposition=0
-                updateMetaData()
-                playMusic()
-            }
+        if (currentIndexSongList < (songlist.size - 1)) {
+            currentIndexSongList += 1
+            mediaPlayer!!.release()
+            musicpausedposition = 0
+            updateMetaData()
+            playMusic()
+        }
     }
 
     fun onPreviousMusicClicked(v: View) {
-            if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
-                currentIndexSongList -= 1
-                mediaPlayer!!.release()
-                musicpausedposition=0
-                updateMetaData()
-                playMusic()
-            }
+        if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
+            currentIndexSongList -= 1
+            mediaPlayer!!.release()
+            musicpausedposition = 0
+            updateMetaData()
+            playMusic()
+        }
     }
-    fun updateMetaData(){
+
+    fun updateMetaData() {
         if (selectfilesucess && musicpausedposition == 0) {
             try {
                 val mmr = FFmpegMediaMetadataRetriever()
@@ -364,8 +424,15 @@ class MainActivity : AppCompatActivity() {
     fun ConvertMStoMinutes(milliseconds: Int): String {
         val minutes = milliseconds / 1000 / 60
         val seconds = milliseconds / 1000 % 60
-        return "$minutes:$seconds"
+        return if(seconds<10){
+            "0$minutes:0$seconds"
+        }
+        else {
+            "0$minutes:$seconds"
+        }
     }
+
+
 
 }
 
