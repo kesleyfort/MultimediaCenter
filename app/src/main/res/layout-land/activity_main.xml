@@ -6,13 +6,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:visibility="visible"
+    android:animateLayoutChanges="true"
     tools:context=".MainActivity">
 
     <FrameLayout
         android:id="@+id/music_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="visible">
+        android:visibility="gone">
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -58,6 +59,7 @@
 
                 <ListView
                     android:id="@+id/musicPlaylist"
+                    style="@style/Widget.AppCompat.ListView"
                     android:layout_width="162dp"
                     android:layout_height="163dp"
                     android:layout_marginBottom="8dp"
@@ -65,7 +67,6 @@
                     android:layout_marginStart="8dp"
                     android:layout_marginTop="8dp"
                     android:background="@color/dark_variant"
-                    android:divider="?android:attr/dividerHorizontal"
                     android:footerDividersEnabled="true"
                     android:headerDividersEnabled="true"
                     android:scrollbars="vertical"
@@ -245,8 +246,8 @@
 
                     <Button
                         android:id="@+id/musicSelectFile"
-                        android:layout_width="60dp"
-                        android:layout_height="40dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:layout_marginEnd="32dp"
                         android:layout_marginStart="8dp"
                         android:background="@android:color/transparent"
@@ -286,17 +287,24 @@
         android:id="@+id/video_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone">
+        android:visibility="visible">
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="263dp">
 
+            <ImageView
+                android:id="@+id/idlescreenVideo"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerInside"
+                app:srcCompat="@drawable/video" />
+
             <VideoView
                 android:id="@+id/playerVideo"
                 android:layout_width="fill_parent"
                 android:layout_height="match_parent"
-                android:visibility="visible"
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
@@ -376,6 +384,14 @@
             </FrameLayout>
 
         </android.support.constraint.ConstraintLayout>
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/home_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
 
     </FrameLayout>
 
