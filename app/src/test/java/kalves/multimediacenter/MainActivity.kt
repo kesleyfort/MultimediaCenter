@@ -28,6 +28,7 @@ import android.animation.AnimatorListenerAdapter
 import android.opengl.ETC1.getHeight
 import android.support.v4.view.ViewCompat.animate
 import android.R.attr.translationY
+import android.view.animation.AnimationUtils
 
 
 class MainActivity : AppCompatActivity() {
@@ -65,62 +66,51 @@ class MainActivity : AppCompatActivity() {
     private val mOnNavigationItemSelectedListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
         when (item.itemId) {
             R.id.nav_music -> {
-                //Make the views go away
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                if (video.visibility == View.VISIBLE) {
-                    video.animate()
-                            .translationX(video.width.toFloat())
-                            .alpha(0.0f)
-                            .setDuration(500)
-                            .setListener(object : AnimatorListenerAdapter() {
-                                override fun onAnimationEnd(animation: Animator) {
-                                    super.onAnimationEnd(animation)
-                                    video.visibility = View.GONE
-                                }
-                            })
+                if (video_frame.visibility == View.VISIBLE) {
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    video_frame.visibility = View.GONE
+                    music_frame.visibility = View.VISIBLE
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
                 }
-
+                if (home_frame.visibility == View.VISIBLE) {
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    home_frame.visibility = View.GONE
+                    music_frame.visibility = View.VISIBLE
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
 
                 return@OnNavigationItemSelectedListener true
             }
             R.id.nav_video -> {
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                if (music.visibility == View.VISIBLE) {
-                    music.animate()
-                            .translationX(music.width.toFloat())
-                            .alpha(0.0f)
-                            .setDuration(500)
-                            .setListener(object : AnimatorListenerAdapter() {
-                                override fun onAnimationEnd(animation: Animator) {
-                                    super.onAnimationEnd(animation)
-                                    music.visibility = View.GONE
-                                }
-                            })
+                if (music_frame.visibility == View.VISIBLE) {
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    music_frame.visibility = View.GONE
+                    video_frame.visibility = View.VISIBLE
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
                 }
-                if (video.visibility == View.GONE) {
-                    video.alpha = 0.0f
-                    video.visibility = View.VISIBLE
-                    video.animate()
-                            .translationX(video.width.toFloat())
-                            .alpha(-1.0f)
-                            .setDuration(500)
-                            .setListener(object : AnimatorListenerAdapter() {
-                                override fun onAnimationEnd(animation: Animator) {
-                                    super.onAnimationEnd(animation)
-                                    video.alpha = 1.0f
-                                }
-                            })
+                if (home_frame.visibility == View.VISIBLE) {
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    home_frame.visibility = View.GONE
+                    video_frame.visibility = View.VISIBLE
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
                 }
+
 
                 return@OnNavigationItemSelectedListener true
             }
             R.id.nav_home -> {
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                music.visibility = View.GONE
-                video.visibility = View.GONE
+                if (video_frame.visibility == View.VISIBLE) {
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    video_frame.visibility = View.GONE
+                    home_frame.visibility = View.VISIBLE
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
+                if (music_frame.visibility == View.VISIBLE) {
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    music_frame.visibility = View.GONE
+                    home_frame.visibility = View.VISIBLE
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
                 return@OnNavigationItemSelectedListener true
             }
             R.id.nav_settings -> {
@@ -234,7 +224,7 @@ class MainActivity : AppCompatActivity() {
 
     fun onFileChooserClicked(v: View) {
         val intent = Intent()
-                .setType("video/*")
+                .setType("video_frame/*")
                 .setAction(Intent.ACTION_GET_CONTENT)
                 .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
 
@@ -476,16 +466,40 @@ class MainActivity : AppCompatActivity() {
 
     fun onPlaylistMusicClicked(v: View) {
         if (!playlistclicked) {
-            MusicAlbumArt.animate().alpha(0.0f)
-            MusicAlbumArt.visibility = View.GONE
-            musicPlaylist.animate().alpha(1.0f)
-            musicPlaylist.visibility = View.VISIBLE
+            MusicAlbumArt.animate().withLayer()
+                    .rotationY(90f)
+                    .setDuration(300)
+                    .withEndAction {
+                        run {
+
+                            musicPlaylist.visibility = View.VISIBLE
+                            MusicAlbumArt.visibility = View.GONE
+                            // second quarter turn
+                            MusicAlbumArt.rotationY = -90f
+                            MusicAlbumArt.animate().withLayer()
+                                    .rotationY(0f)
+                                    .setDuration(300)
+                                    .start()
+                        }
+                    }.start()
             playlistclicked = true
         } else {
-            MusicAlbumArt.animate().alpha(1.0f)
-            MusicAlbumArt.visibility = View.VISIBLE
-            musicPlaylist.animate().alpha(0.0f)
-            musicPlaylist.visibility = View.GONE
+            musicPlaylist.animate().withLayer()
+                    .rotationY(90f)
+                    .setDuration(500)
+                    .withEndAction {
+                        run {
+                            MusicAlbumArt.visibility = View.VISIBLE
+                            musicPlaylist.visibility = View.GONE
+
+                            // second quarter turn
+                            musicPlaylist.rotationY = -90f
+                            musicPlaylist.animate().withLayer()
+                                    .rotationY(0f)
+                                    .setDuration(500)
+                                    .start()
+                        }
+                    }.start()
             playlistclicked = false
         }
     }
