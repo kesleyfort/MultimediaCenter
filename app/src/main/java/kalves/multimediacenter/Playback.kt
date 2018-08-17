@@ -372,4 +372,8 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         return mMediaPlayer
     }
 
+    fun clearPlaylist(){
+        songlist.removeAll(songlist)
+    }
+
 }

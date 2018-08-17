@@ -344,22 +344,26 @@ open class MainActivity : AppCompatActivity() {
     }
 
     fun onNextMusicClicked(v: View) {
+        currentIndexSongList = myService!!.getCurrentSong()
         if (currentIndexSongList < (songlist.size - 1)) {
             currentIndexSongList += 1
-            mediaPlayer!!.release()
-            musicpausedposition = 0
+            myService!!.releasePlayer()
+            myService!!.setCurrentSong(currentIndexSongList)
+            myService!!.setMusicPausedPosition(0)
             updateMetaData()
-            playMusic()
+            myService!!.playSongs()
         }
     }
 
     fun onPreviousMusicClicked(v: View) {
+        currentIndexSongList = myService!!.getCurrentSong()
         if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
             currentIndexSongList -= 1
-            mediaPlayer!!.release()
-            musicpausedposition = 0
+            myService!!.releasePlayer()
+            myService!!.setCurrentSong(currentIndexSongList)
+            myService!!.setMusicPausedPosition(0)
             updateMetaData()
-            playMusic()
+            myService!!.playSongs()
         }
     }
 
@@ -434,10 +438,11 @@ open class MainActivity : AppCompatActivity() {
             songlist.clear()
             songlist.addAll(originalsonglist)
             updatePlaylist()
+            myService!!.setCurrentSong(0)
             updateMetaData()
-            if(mediaPlayer!=null)
-                mediaPlayer!!.release()
-            playMusic()
+            if(!myService!!.mediaPlayerIsNull())
+                myService!!.releasePlayer()
+                myService!!.playSongs()
             shuffleclicked = false
         }
     }
@@ -514,10 +519,15 @@ open class MainActivity : AppCompatActivity() {
 
     private fun shuffleMusic(){
         songlist.shuffle()
-        if(mediaPlayer!=null)
-            mediaPlayer!!.release()
-        updatePlaylist()
-        playMusic()
+        myService!!.clearPlaylist()
+        myService!!.createPlaylist(songlist)
+        if(!myService!!.mediaPlayerIsNull()) {
+            myService!!.releasePlayer()
+            myService!!.setMusicPausedPosition(0)
+            myService!!.setCurrentSong(0)
+            myService!!.playSongs()
+            updatePlaylist()
+        }
     }
 
     private fun convertMStoMinutes(milliseconds: Int): String {
@@ -528,12 +538,6 @@ open class MainActivity : AppCompatActivity() {
         } else {
             "0$minutes:$seconds"
         }
-    }
-    fun setCurrentSong(index: Int){
-        currentIndexSongList = index
-    }
-    fun setSeekBarProgress(progress: Int){
-        musicseekBar.progress = progress
     }
 
 }
