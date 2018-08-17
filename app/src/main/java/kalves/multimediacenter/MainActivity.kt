@@ -29,9 +29,14 @@ import android.R.attr.translationY
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
+import android.graphics.Color
 import android.os.*
 import android.view.animation.AnimationUtils
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions.bitmapTransform
 import io.reactivex.*;
+import jp.wasabeef.blurry.Blurry
+import jp.wasabeef.glide.transformations.internal.FastBlur
 
 
 open class MainActivity : AppCompatActivity() {
@@ -372,6 +377,13 @@ open class MainActivity : AppCompatActivity() {
         MusicData.text = "${metadata.second} - ${metadata.first}"
         val image = BitmapFactory.decodeByteArray(metadata.third, 0, metadata.third.size)
         MusicAlbumArt.setImageBitmap(image)
+        Blurry.with(this)
+                .radius(100)
+                .sampling(4)
+                .async()
+                .animate(500)
+                .from(image)
+                .into(background)
     }
 
     private fun playVideo(path: Uri?) {

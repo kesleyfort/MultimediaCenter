@@ -13,9 +13,16 @@
         android:layout_height="match_parent"
         android:visibility="visible">
 
+        <ImageView
+            android:id="@+id/background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            app:srcCompat="@android:color/transparent" />
+
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="434dp"
+            android:layout_height="480dp"
             android:visibility="visible">
 
             <android.support.constraint.ConstraintLayout
@@ -42,8 +49,8 @@
 
                 <ImageView
                     android:id="@+id/MusicAlbumArt"
-                    android:layout_width="250dp"
-                    android:layout_height="250dp"
+                    android:layout_width="300dp"
+                    android:layout_height="300dp"
                     android:layout_marginBottom="32dp"
                     android:layout_marginTop="16dp"
                     app:layout_constraintBottom_toTopOf="@+id/musicseekBar"
@@ -57,8 +64,8 @@
 
                 <ListView
                     android:id="@+id/musicPlaylist"
-                    android:layout_width="250dp"
-                    android:layout_height="250dp"
+                    android:layout_width="300dp"
+                    android:layout_height="300dp"
                     android:layout_marginBottom="32dp"
                     android:layout_marginTop="16dp"
                     android:background="@color/white"
@@ -161,17 +168,19 @@
 
                     <ImageView
                         android:id="@+id/playMusicButton"
-                        android:layout_width="100dp"
-                        android:layout_height="50dp"
+                        android:layout_width="95dp"
+                        android:layout_height="76dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
                         android:background="@android:color/transparent"
                         android:onClick="onPlayMusicClicked"
                         android:tint="@color/design_default_color_primary_dark"
                         android:visibility="visible"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/nextmusicButton"
-                        app:layout_constraintStart_toEndOf="@+id/previousMusicButton"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.768"
+                        app:layout_constraintVertical_bias="0.797"
                         app:srcCompat="@drawable/exo_controls_play" />
 
                     <ImageView
@@ -191,51 +200,52 @@
 
                     <ImageView
                         android:id="@+id/nextmusicButton"
-                        android:layout_width="100dp"
-                        android:layout_height="50dp"
-                        android:layout_marginEnd="16dp"
+                        android:layout_width="50dp"
+                        android:layout_height="35dp"
+                        android:layout_marginStart="12dp"
                         android:background="@android:color/transparent"
                         android:onClick="onNextMusicClicked"
                         android:tint="@color/design_default_color_primary_dark"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/playMusicButton"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.768"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_next" />
 
                     <ImageView
                         android:id="@+id/previousMusicButton"
-                        android:layout_width="100dp"
-                        android:layout_height="50dp"
-                        android:layout_marginStart="16dp"
+                        android:layout_width="50dp"
+                        android:layout_height="35dp"
+                        android:layout_marginEnd="12dp"
                         android:background="@android:color/transparent"
                         android:onClick="onPreviousMusicClicked"
                         android:tint="@color/design_default_color_primary_dark"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/playMusicButton"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.768"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_previous" />
 
                     <ImageView
                         android:id="@+id/shuffleMusicButton"
-                        android:layout_width="89dp"
+                        android:layout_width="64dp"
                         android:layout_height="35dp"
                         android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
                         android:background="@android:color/transparent"
                         android:onClick="onShuffleMusicClicked"
                         android:tint="@color/design_default_color_primary_dark"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintHorizontal_bias="0.949"
+                        app:layout_constraintHorizontal_bias="0.96"
                         app:layout_constraintStart_toEndOf="@+id/repeatButton"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.665"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_shuffle" />
 
                     <ImageView
                         android:id="@+id/repeatButton"
-                        android:layout_width="89dp"
+                        android:layout_width="64dp"
                         android:layout_height="35dp"
                         android:layout_marginStart="16dp"
                         android:background="@android:color/transparent"
@@ -244,7 +254,7 @@
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.665"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_repeat_all" />
 
                     <Button
