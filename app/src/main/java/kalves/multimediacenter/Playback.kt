@@ -17,9 +17,11 @@ import android.text.TextUtils
 import wseemann.media.FFmpegMediaMetadataRetriever
 import android.support.v4.os.HandlerCompat.postDelayed
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.*
 import android.support.v4.app.NotificationCompat
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import br.com.goncalves.pugnotification.notification.PugNotification
@@ -28,15 +30,11 @@ import br.com.goncalves.pugnotification.notification.PugNotification
 class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
     //Variables
     private var musicpausedposition: Int = 0
-    private var shuffleclicked: Boolean = false
     private var repeatclicked: Boolean = false
+    private var isPaused: Boolean = false
     private var currentIndexSongList = 0
-    private var playlistclicked: Boolean = false
     private var mMediaPlayer: MediaPlayer? = null
-    private var songlist: MutableList<Uri?> = mutableListOf<Uri?>()
-    private var videolist: MutableList<Uri?> = mutableListOf()
-    private var originalsonglist: MutableList<Uri?> = mutableListOf<Uri?>()
-    private var shuffledlist: MutableList<Uri?> = mutableListOf<Uri?>()
+    private var songlist: MutableList<Uri?> = mutableListOf()
     var musictitle: String = ""
     var musicartist: String = ""
     var artwork: ByteArray = byteArrayOf(0)
@@ -71,40 +69,35 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
     }
 
     fun playSongs() {
-
-        if (musicpausedposition == 0) {
+        if(isPaused) {
+            Log.i("IF - PAUSED", "IF - PAUSED")
             mMediaPlayer = MediaPlayer().apply {
                 setAudioStreamType(AudioManager.STREAM_MUSIC)
                 setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepare()
-                start()
-            }
-        } else {
-            mMediaPlayer = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_MUSIC)
-                setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepare()
-                seekTo(musicpausedposition)
-                start()
-            }
-
-        }
-        mMediaPlayer!!.setOnCompletionListener {
-            if (currentIndexSongList < (songlist.size - 1)) {
-                currentIndexSongList += 1
-                playSongs()
-            } else if (currentIndexSongList == (songlist.size - 1)) {
-                if (repeatclicked) {
-                    currentIndexSongList = 0
-                    playSongs()
-                } else {
-                    currentIndexSongList = 0
+                prepareAsync()
+                setOnPreparedListener {
+                    seekTo(musicpausedposition)
+                    start()
                 }
 
             }
         }
-        mMediaSessionCompat!!.isActive = true
-        setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+        if (songlist.isNotEmpty()) {
+            if (!isPaused) {
+                mMediaPlayer = MediaPlayer().apply {
+                    setAudioStreamType(AudioManager.STREAM_MUSIC)
+                    setDataSource(applicationContext, songlist[currentIndexSongList])
+                    prepareAsync()
+                    setOnPreparedListener {
+                        start()
+                    }
+                }
+            }
+            mMediaSessionCompat!!.isActive = true
+            setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+            createNotificationChannel()
+
+        }
     }
 
     private val mMediaSessionCallback = object : MediaSessionCompat.Callback() {
@@ -180,20 +173,34 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         initMediaSession()
         initNoisyReceiver()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        createNotificationChannel()
+        mMediaPlayer!!.setOnCompletionListener {
+            if (currentIndexSongList < (songlist.size - 1)) {
+                currentIndexSongList += 1
+                playSongs()
+            } else if (currentIndexSongList == (songlist.size - 1)) {
+                if (repeatclicked) {
+                    currentIndexSongList = 0
+                    playSongs()
+                } else {
+                    currentIndexSongList = 0
+                }
+
+            }
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel() {
-
+        val data = getMetaData()
+        val image = BitmapFactory.decodeByteArray(data.third, 0, data.third.size)
         PugNotification.with(this)
                 .load()
-                .title("Notification")
-                .message("Mensagem")
-                .bigTextStyle("Big Text")
-                .smallIcon(R.drawable.pugnotification_ic_launcher)
-                .largeIcon(R.drawable.pugnotification_ic_launcher)
-                .flags(Notification.FLAG_FOREGROUND_SERVICE)
+                .title("Now Playing")
+                .message("${data.second} - ${data.first}")
+                .bigTextStyle("${data.second} - ${data.first}")
+                .smallIcon(R.drawable.ic_launcher_foreground)
+                .largeIcon(image)
+                .ongoing(false)
                 .simple()
                 .build()
     }
@@ -326,12 +333,20 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
     }
 
     fun isMediaPlaying(): Boolean {
-        return mMediaPlayer!!.isPlaying
+        if (mMediaPlayer != null) {
+            return mMediaPlayer!!.isPlaying
+        } else
+            return false
     }
 
     fun pauseMusic() {
-        mMediaPlayer!!.pause()
         musicpausedposition = mMediaPlayer!!.currentPosition
+        Log.i("PAUSED POSITION: ", "PAUSED POSITION: $musicpausedposition")
+        mMediaPlayer!!.pause()
+        mMediaPlayer!!.reset()
+        mMediaPlayer!!.release()
+        isPaused = true
+
     }
 
     fun setCurrentSong(currentSong: Int) {
@@ -372,8 +387,37 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         return mMediaPlayer
     }
 
-    fun clearPlaylist(){
+    fun clearPlaylist() {
         songlist.removeAll(songlist)
+    }
+
+    fun nextSong() {
+        if (songlist.size > 1) {
+            currentIndexSongList = getCurrentSong()
+            if (currentIndexSongList < (songlist.size - 1)) {
+                currentIndexSongList += 1
+                releasePlayer()
+                setCurrentSong(currentIndexSongList)
+                setMusicPausedPosition(0)
+                playSongs()
+
+            }
+        }
+    }
+
+    fun previousSong() {
+        currentIndexSongList = getCurrentSong()
+        if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
+            currentIndexSongList -= 1
+            releasePlayer()
+            setCurrentSong(currentIndexSongList)
+            setMusicPausedPosition(0)
+                playSongs()
+        }
+    }
+
+    fun setPausedState(state: Boolean){
+        isPaused = state
     }
 
 }

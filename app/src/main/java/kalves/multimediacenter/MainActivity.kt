@@ -1,11 +1,17 @@
 package kalves.multimediacenter
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.content.ContextCompat
 import android.support.v4.graphics.drawable.DrawableCompat
@@ -14,29 +20,10 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AnimationUtils
 import android.widget.*
 import kotlinx.android.synthetic.main.activity_main.*
 import wseemann.media.FFmpegMediaMetadataRetriever
-import android.widget.ArrayAdapter
-import java.util.*
-import java.util.Arrays.asList
-import kotlin.collections.ArrayList
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.opengl.ETC1.getHeight
-import android.support.v4.view.ViewCompat.animate
-import android.R.attr.translationY
-import android.content.ComponentName
-import android.content.Context
-import android.content.ServiceConnection
-import android.graphics.Color
-import android.os.*
-import android.view.animation.AnimationUtils
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions.bitmapTransform
-import io.reactivex.*;
-import jp.wasabeef.blurry.Blurry
-import jp.wasabeef.glide.transformations.internal.FastBlur
 
 
 open class MainActivity : AppCompatActivity() {
@@ -45,6 +32,7 @@ open class MainActivity : AppCompatActivity() {
     //Declare Variables
     private var mediaController: MediaController? = null
     private var fullscreenclicked: Boolean = false
+    private var isPaused: Boolean = false
     private var playervideoWidth: Int = 0
     private var playervideoHeigth: Int = 0
     private var mediaPlayer: MediaPlayer? = null
@@ -60,15 +48,20 @@ open class MainActivity : AppCompatActivity() {
     private var repeatclicked: Boolean = false
     private var currentIndexSongList = 0
     private var playlistclicked: Boolean = false
-    val mUpdateSeekbar = object : Runnable {
+    private val mUpdateSeekbar = object : Runnable {
         override fun run() {
-            musicseekBar?.progress = myService!!.getCurrentPlaybackPosition()
-            musicSeekBarUpdateHandler.postDelayed(this, 500)
-            initialtimeMusic.text = convertMStoMinutes(myService!!.getCurrentPlaybackPosition())
-            if(musicseekBar.progress<500) {
-                updateMetaData()
-                finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
+            if(isPaused){
+                musicseekBar?.progress = myService!!.getPausedPosition()
             }
+            else {
+                musicseekBar?.progress = myService!!.getCurrentPlaybackPosition()
+            }
+                musicSeekBarUpdateHandler.postDelayed(this, 500)
+                initialtimeMusic.text = convertMStoMinutes(myService!!.getCurrentPlaybackPosition())
+                if (musicseekBar.progress < 500) {
+                    updateMetaData()
+                    finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
+                }
 
         }
     }
@@ -149,8 +142,15 @@ open class MainActivity : AppCompatActivity() {
                 if (fromUser){
                     if (!myService!!.mediaPlayerIsNull())
                     {
-                        if (!myService!!.mediaPlayerIsNull())
-                            myService!!.setPositionFromSeekBar(progress)
+                        if (!myService!!.mediaPlayerIsNull()) {
+                            if (isPaused) {
+                                myService!!.setMusicPausedPosition(progress)
+                                musicseekBar.progress = myService!!.getPausedPosition()
+                            } else {
+                                myService!!.setPositionFromSeekBar(progress)
+                                musicseekBar.progress = myService!!.getCurrentPlaybackPosition()
+                            }
+                        }
                     }
                 }
             }
@@ -214,7 +214,11 @@ open class MainActivity : AppCompatActivity() {
             }
             selectfilesucess = true
             updatePlaylist()
+            if(originalsonglist.isNotEmpty()){
+                originalsonglist.clear()
+            }
             originalsonglist.addAll(songlist)
+            myService!!.clearPlaylist()
             myService!!.createPlaylist(originalsonglist)
             updateMetaData()
 
@@ -258,51 +262,19 @@ open class MainActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "Select a file"), 111)
     }
 
-    fun playMusic() {
-        if (selectfilesucess && musicpausedposition == 0) {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_MUSIC)
-                setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepare()
-                start()
-            }
-            var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-            var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-            var duration = findViewById<TextView>(R.id.finaltimeMusic)
-            playbutton.visibility = View.GONE
-            pausebutton.visibility = View.VISIBLE
-            duration.text = convertMStoMinutes(mediaPlayer!!.duration)
-            musicseekBar.max = mediaPlayer!!.duration
-
-        } else if (selectfilesucess && musicpausedposition != 0) {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_MUSIC)
-                setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepare()
-                seekTo(musicpausedposition)
-                start()
-            }
-            musicseekBar.max = mediaPlayer!!.duration
-            val musicDuration = findViewById<TextView>(R.id.finaltimeMusic)
-            musicDuration.text = convertMStoMinutes(mediaPlayer!!.duration)
-            var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-            var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-            playbutton.visibility = View.GONE
-            pausebutton.visibility = View.VISIBLE
-        }
-        updateMetaData()
-
-        if (selectfilesucess) {
-            musicSeekBarUpdateHandler.postDelayed(mUpdateSeekbar, 0);
-
-        }
-
-
-    }
-
     fun onPlayMusicClicked(v: View) {
-        if (!myService!!.mediaPlayerIsNull()) {
-            myService!!.playSongs()
+        if (!myService!!.mediaPlayerIsNull() && songlist.isNotEmpty()) {
+            if(isPaused){
+                Log.i("IS PAUSED IF ", "${myService!!.getPausedPosition()}")
+                musicseekBar.progress = myService!!.getPausedPosition()
+                myService!!.setPausedState(isPaused)
+                myService!!.playSongs()
+            }
+            else{
+                musicseekBar.progress = myService!!.getPausedPosition()
+                myService!!.setPausedState(isPaused)
+                myService!!.playSongs()
+            }
             var playbutton = findViewById<ImageView>(R.id.playMusicButton)
             var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
             var duration = findViewById<TextView>(R.id.finaltimeMusic)
@@ -310,16 +282,18 @@ open class MainActivity : AppCompatActivity() {
             pausebutton.visibility = View.VISIBLE
             duration.text = convertMStoMinutes(myService!!.getSeekBarMaximum())
             musicseekBar.max = myService!!.getSeekBarMaximum()
+            isPaused = false
             mUpdateSeekbar.run()
-        } else if (selectfilesucess && myService!!.getPausedPosition() != 0) {
-
+            initialtimeMusic.text = convertMStoMinutes(myService!!.getPausedPosition())
         }
 
     }
 
     fun onPauseMusicClicked(v: View) {
+        isPaused = true
         if (myService!!.isMediaPlaying()) {
             myService!!.pauseMusic()
+            myService!!.setPausedState(isPaused)
             var playbutton = findViewById<ImageView>(R.id.playMusicButton)
             var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
             playbutton.visibility = View.VISIBLE
@@ -330,46 +304,27 @@ open class MainActivity : AppCompatActivity() {
     }
 
     fun onStopMusicClicked(v: View) {
-        if (mediaPlayer != null) {
-            if (mediaPlayer!!.isPlaying) {
-                mediaPlayer!!.release()
-                musicpausedposition = 0
-                currentIndexSongList = 0
-                var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-                var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-                playbutton.visibility = View.VISIBLE
-                pausebutton.visibility = View.GONE
-                musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar)
-                musicseekBar.progress = 0
-                initialtimeMusic.text = "00:00"
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            }
-            mediaPlayer = null
-        }
+        musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar)
+        myService!!.releasePlayer()
+        musicseekBar.progress = 0
+        MusicAlbumArt.setImageResource(R.drawable.nocoverart)
+        MusicData.text = " - "
+        initialtimeMusic.text = "00:00"
+        finaltimeMusic.text = "00:00"
+        var playbutton = findViewById<ImageView>(R.id.playMusicButton)
+        var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
+        playbutton.visibility = View.VISIBLE
+        pausebutton.visibility = View.GONE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     fun onNextMusicClicked(v: View) {
-        currentIndexSongList = myService!!.getCurrentSong()
-        if (currentIndexSongList < (songlist.size - 1)) {
-            currentIndexSongList += 1
-            myService!!.releasePlayer()
-            myService!!.setCurrentSong(currentIndexSongList)
-            myService!!.setMusicPausedPosition(0)
-            updateMetaData()
-            myService!!.playSongs()
-        }
+        myService!!.nextSong()
+        musicseekBar.max = myService!!.getDuration()
     }
 
     fun onPreviousMusicClicked(v: View) {
-        currentIndexSongList = myService!!.getCurrentSong()
-        if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
-            currentIndexSongList -= 1
-            myService!!.releasePlayer()
-            myService!!.setCurrentSong(currentIndexSongList)
-            myService!!.setMusicPausedPosition(0)
-            updateMetaData()
-            myService!!.playSongs()
-        }
+        myService!!.previousSong()
     }
 
     fun updateMetaData() {
@@ -377,13 +332,6 @@ open class MainActivity : AppCompatActivity() {
         MusicData.text = "${metadata.second} - ${metadata.first}"
         val image = BitmapFactory.decodeByteArray(metadata.third, 0, metadata.third.size)
         MusicAlbumArt.setImageBitmap(image)
-        Blurry.with(this)
-                .radius(100)
-                .sampling(4)
-                .async()
-                .animate(500)
-                .from(image)
-                .into(background)
     }
 
     private fun playVideo(path: Uri?) {
@@ -441,21 +389,23 @@ open class MainActivity : AppCompatActivity() {
     }
 
     fun onShuffleMusicClicked(v: View) {
-        if (!shuffleclicked) {
-            DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorAccent));
-            shuffleclicked = true
-            shuffleMusic()
-        } else {
-            DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorPrimary));
-            songlist.clear()
-            songlist.addAll(originalsonglist)
-            updatePlaylist()
-            myService!!.setCurrentSong(0)
-            updateMetaData()
-            if(!myService!!.mediaPlayerIsNull())
-                myService!!.releasePlayer()
+        if(selectfilesucess) {
+            if (!shuffleclicked) {
+                DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorAccent));
+                shuffleclicked = true
+                shuffleMusic()
+            } else {
+                DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorPrimary));
+                songlist.clear()
+                songlist.addAll(originalsonglist)
+                updatePlaylist()
+                myService!!.setCurrentSong(0)
+                updateMetaData()
+                if (!myService!!.mediaPlayerIsNull())
+                    myService!!.releasePlayer()
                 myService!!.playSongs()
-            shuffleclicked = false
+                shuffleclicked = false
+            }
         }
     }
 
