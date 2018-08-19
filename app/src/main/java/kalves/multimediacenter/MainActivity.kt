@@ -12,9 +12,13 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
+import android.os.RemoteException
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.content.ContextCompat
 import android.support.v4.graphics.drawable.DrawableCompat
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.DisplayMetrics
 import android.util.Log
@@ -26,7 +30,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import wseemann.media.FFmpegMediaMetadataRetriever
 
 
-open class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetTextI18n")
     //Declare Variables
@@ -40,14 +44,16 @@ open class MainActivity : AppCompatActivity() {
     private var selectVideofilesucess: Boolean = false
     private var musicpausedposition: Int = 0
     private val musicSeekBarUpdateHandler = Handler()
-    private var songlist: MutableList<Uri?> = mutableListOf<Uri?>()
+    private var songlist: MutableList<Uri?> = mutableListOf()
     private var videolist: MutableList<Uri?> = mutableListOf()
-    private var originalsonglist: MutableList<Uri?> = mutableListOf<Uri?>()
-    private var shuffledlist: MutableList<Uri?> = mutableListOf<Uri?>()
+    private var originalsonglist: MutableList<Uri?> = mutableListOf()
+    private var shuffledlist: MutableList<Uri?> = mutableListOf()
     private var shuffleclicked: Boolean = false
     private var repeatclicked: Boolean = false
     private var currentIndexSongList = 0
     private var playlistclicked: Boolean = false
+    private var mMediaBrowserCompat: MediaBrowserCompat? = null
+    private var mMediaControllerCompat: MediaControllerCompat? = null
     private val mUpdateSeekbar = object : Runnable {
         override fun run() {
             if(isPaused){
@@ -56,13 +62,11 @@ open class MainActivity : AppCompatActivity() {
             else {
                 musicseekBar?.progress = myService!!.getCurrentPlaybackPosition()
             }
+            initialtimeMusic.text = convertMStoMinutes(myService!!.getCurrentPlaybackPosition())
+            if (musicseekBar.progress == 0) {
+                finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
+            }
                 musicSeekBarUpdateHandler.postDelayed(this, 500)
-                initialtimeMusic.text = convertMStoMinutes(myService!!.getCurrentPlaybackPosition())
-                if (musicseekBar.progress < 500) {
-                    updateMetaData()
-                    finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
-                }
-
         }
     }
     var myService: Playback? = null
@@ -196,7 +200,6 @@ open class MainActivity : AppCompatActivity() {
         bindService(intent, myConnection, Context.BIND_AUTO_CREATE)
     }
 
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -218,7 +221,6 @@ open class MainActivity : AppCompatActivity() {
                 originalsonglist.clear()
             }
             originalsonglist.addAll(songlist)
-            myService!!.clearPlaylist()
             myService!!.createPlaylist(originalsonglist)
             updateMetaData()
 
@@ -240,10 +242,14 @@ open class MainActivity : AppCompatActivity() {
             playVideo(videolist[0])
         }
     }
+
+
     fun runSeekBar(){
         musicseekBar.max = myService!!.getDuration()
         mUpdateSeekbar.run()
     }
+
+
     fun onFileChooserClicked(v: View) {
         val intent = Intent()
                 .setType("video_frame/*")
@@ -252,6 +258,7 @@ open class MainActivity : AppCompatActivity() {
 
         startActivityForResult(Intent.createChooser(intent, "Select a file"), 112)
     }
+
 
     fun onMusicFileChooserClicked(v: View) {
         val intent = Intent()
@@ -262,29 +269,27 @@ open class MainActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "Select a file"), 111)
     }
 
+
     fun onPlayMusicClicked(v: View) {
         if (!myService!!.mediaPlayerIsNull() && songlist.isNotEmpty()) {
             if(isPaused){
-                Log.i("IS PAUSED IF ", "${myService!!.getPausedPosition()}")
                 musicseekBar.progress = myService!!.getPausedPosition()
                 myService!!.setPausedState(isPaused)
                 myService!!.playSongs()
             }
             else{
-                musicseekBar.progress = myService!!.getPausedPosition()
                 myService!!.setPausedState(isPaused)
                 myService!!.playSongs()
             }
-            var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-            var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-            var duration = findViewById<TextView>(R.id.finaltimeMusic)
-            playbutton.visibility = View.GONE
-            pausebutton.visibility = View.VISIBLE
-            duration.text = convertMStoMinutes(myService!!.getSeekBarMaximum())
+            playMusicButton.visibility = View.GONE
+            pauseMusicButton.visibility = View.VISIBLE
+            finaltimeMusic.text = convertMStoMinutes(myService!!.getSeekBarMaximum())
             musicseekBar.max = myService!!.getSeekBarMaximum()
             isPaused = false
-            mUpdateSeekbar.run()
             initialtimeMusic.text = convertMStoMinutes(myService!!.getPausedPosition())
+            myService!!.showPlayingNotification()
+            musicseekBar.progress = 0
+            runSeekBar()
         }
 
     }
@@ -300,6 +305,7 @@ open class MainActivity : AppCompatActivity() {
             pausebutton.visibility = View.GONE
             musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar)
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            myService!!.showPausedNotification()
         }
     }
 
@@ -321,10 +327,19 @@ open class MainActivity : AppCompatActivity() {
     fun onNextMusicClicked(v: View) {
         myService!!.nextSong()
         musicseekBar.max = myService!!.getDuration()
+        updateMetaData()
+        myService!!.showPlayingNotification()
+        musicseekBar.progress = 0
+        runSeekBar()
     }
 
     fun onPreviousMusicClicked(v: View) {
         myService!!.previousSong()
+        musicseekBar.max = myService!!.getDuration()
+        updateMetaData()
+        myService!!.showPlayingNotification()
+        musicseekBar.progress = 0
+        runSeekBar()
     }
 
     fun updateMetaData() {
@@ -469,7 +484,7 @@ open class MainActivity : AppCompatActivity() {
                 mmr.setDataSource(applicationContext, songlist[i])
                 var musictitle = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_TITLE)
                 var musicartist = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_ARTIST)
-                songnames.add("$musictitle - $musicartist")
+                songnames.add("\"$musictitle\",\n$musicartist")
 
             }
             // Create an ArrayAdapter from List

@@ -1,33 +1,39 @@
 package kalves.multimediacenter
 
 import android.annotation.TargetApi
-import android.app.*
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.*
+import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.*
 import android.service.media.MediaBrowserService
 import android.support.annotation.Nullable
+import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaButtonReceiver
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
-import wseemann.media.FFmpegMediaMetadataRetriever
-import android.support.v4.os.HandlerCompat.postDelayed
-import android.content.Intent
-import android.graphics.BitmapFactory
-import android.graphics.Color
-import android.os.*
-import android.support.v4.app.NotificationCompat
 import android.util.Log
-import android.view.View
-import android.widget.ImageView
-import br.com.goncalves.pugnotification.notification.PugNotification
+import wseemann.media.FFmpegMediaMetadataRetriever
+import android.support.v4.media.MediaBrowserServiceCompat;
+import android.support.v4.media.MediaMetadataCompat;
 
 
-class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
+class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeListener {
+    override fun onLoadChildren(p0: String, p1: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     //Variables
     private var musicpausedposition: Int = 0
     private var repeatclicked: Boolean = false
@@ -38,6 +44,7 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
     var musictitle: String = ""
     var musicartist: String = ""
     var artwork: ByteArray = byteArrayOf(0)
+    var notification: Unit? = null
 
     private var mMediaSessionCompat: MediaSessionCompat? = null
     private val mNoisyReceiver = object : BroadcastReceiver() {
@@ -62,64 +69,31 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         }
     }
     //end of Binder
-
-
-    fun createPlaylist(playlist: MutableList<Uri?>) {
-        songlist.addAll(playlist)
-    }
-
-    fun playSongs() {
-        if(isPaused) {
-            Log.i("IF - PAUSED", "IF - PAUSED")
-            mMediaPlayer = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_MUSIC)
-                setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepareAsync()
-                setOnPreparedListener {
-                    seekTo(musicpausedposition)
-                    start()
-                }
-
-            }
-        }
-        if (songlist.isNotEmpty()) {
-            if (!isPaused) {
-                mMediaPlayer = MediaPlayer().apply {
-                    setAudioStreamType(AudioManager.STREAM_MUSIC)
-                    setDataSource(applicationContext, songlist[currentIndexSongList])
-                    prepareAsync()
-                    setOnPreparedListener {
-                        start()
-                    }
-                }
-            }
-            mMediaSessionCompat!!.isActive = true
-            setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
-            createNotificationChannel()
-
-        }
-    }
-
     private val mMediaSessionCallback = object : MediaSessionCompat.Callback() {
 
         override fun onPlay() {
             super.onPlay()
-            if (successfullyRetrievedAudioFocus()) {
-                mMediaSessionCompat!!.isActive = true;
-                setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
-                mMediaPlayer!!.start()
+            if (!successfullyRetrievedAudioFocus()) {
+                return
             }
+            Log.i("MediaSessionCalback", "ONPLAY")
+            mMediaSessionCompat!!.isActive = true
+            setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+
+            showPlayingNotification()
+            mMediaPlayer!!.start()
         }
 
         override fun onPause() {
             super.onPause()
-            if (mMediaPlayer!!.isPlaying) {
-                mMediaPlayer!!.pause()
-                setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
-            }
+            Log.i("MediaSessionCalback", "ONPAUSE")
+            mMediaPlayer!!.pause()
+            setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
+            showPausedNotification()
         }
 
         override fun onSkipToNext() {
+            Log.i("MediaSessionCalback", "ONSKIPTONEXT")
             super.onSkipToNext()
             if (currentIndexSongList < (songlist.size - 1)) {
                 currentIndexSongList += 1
@@ -139,70 +113,20 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
                 playSongs()
             }
         }
-
-        override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
-            super.onPlayFromMediaId(mediaId, extras)
-        }
-    }
-
-    @Nullable
-    fun onGetRoot(clientPackageName: String, clientUid: Int, @Nullable rootHints: Bundle): MediaBrowserService.BrowserRoot? {
-        return if (TextUtils.equals(clientPackageName, packageName)) {
-            MediaBrowserService.BrowserRoot(getString(R.string.app_name), null)
-        } else null
-
-    }
-
-    //Not important for general audio service, required for class
-    fun onLoadChildren(parentId: String, result: MediaBrowserService.Result<List<MediaBrowserCompat.MediaItem>>) {
-        result.sendResult(null)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        initMediaPlayer()
-        initMediaSession()
-        initNoisyReceiver()
         MediaButtonReceiver.handleIntent(mMediaSessionCompat, intent)
         return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onCreate() {
         super.onCreate()
-
+        Log.i("On Create", "ON CREATE RUNNED")
         initMediaPlayer()
         initMediaSession()
         initNoisyReceiver()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        mMediaPlayer!!.setOnCompletionListener {
-            if (currentIndexSongList < (songlist.size - 1)) {
-                currentIndexSongList += 1
-                playSongs()
-            } else if (currentIndexSongList == (songlist.size - 1)) {
-                if (repeatclicked) {
-                    currentIndexSongList = 0
-                    playSongs()
-                } else {
-                    currentIndexSongList = 0
-                }
-
-            }
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.O)
-    private fun createNotificationChannel() {
-        val data = getMetaData()
-        val image = BitmapFactory.decodeByteArray(data.third, 0, data.third.size)
-        PugNotification.with(this)
-                .load()
-                .title("Now Playing")
-                .message("${data.second} - ${data.first}")
-                .bigTextStyle("${data.second} - ${data.first}")
-                .smallIcon(R.drawable.ic_launcher_foreground)
-                .largeIcon(image)
-                .ongoing(false)
-                .simple()
-                .build()
     }
 
 
@@ -224,6 +148,8 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         mediaButtonIntent.setClass(this, MediaButtonReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(this, 0, mediaButtonIntent, 0)
         mMediaSessionCompat!!.setMediaButtonReceiver(pendingIntent)
+        sessionToken = mMediaSessionCompat!!.sessionToken
+
 
     }
 
@@ -275,22 +201,69 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         } else {
             playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_PLAY)
         }
-        if (state == PlaybackStateCompat.STATE_SKIPPING_TO_NEXT) {
-            playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
-        }
-        if (state == PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS) {
-            playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
-        }
         playbackstateBuilder.setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
         mMediaSessionCompat!!.setPlaybackState(playbackstateBuilder.build())
     }
-
-    private fun showPlayingNotification() {
-
+    fun createPlaylist(playlist: MutableList<Uri?>) {
+        songlist.addAll(playlist)
     }
 
-    private fun showPausedNotification() {
+    fun playSongs() {
+        if(isPaused) {
+            mMediaPlayer!!.start()
+            setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+            showPausedNotification()
+        }
+        if (songlist.isNotEmpty()) {
+            if (!isPaused) {
+                mMediaPlayer = MediaPlayer().apply {
+                    setAudioStreamType(AudioManager.STREAM_MUSIC)
+                    setDataSource(applicationContext, songlist[currentIndexSongList])
+                    prepareAsync()
+                    setOnPreparedListener {
+                        start()
+                    }
+                }
+            }
+            mMediaSessionCompat!!.isActive = true
+            setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+            mMediaPlayer!!.setOnCompletionListener {
+                if (currentIndexSongList < (songlist.size - 1)) {
+                    currentIndexSongList += 1
+                    playSongs()
+                } else if (currentIndexSongList == (songlist.size - 1)) {
+                    if (repeatclicked) {
+                        currentIndexSongList = 0
+                        playSongs()
+                    } else {
+                        currentIndexSongList = 0
+                    }
 
+                }
+            }
+
+        }
+    }
+
+    fun showPlayingNotification() {
+        val builder = MediaStyleHelper.from(this@Playback, mMediaSessionCompat, getMetaData())
+        builder.addAction(NotificationCompat.Action(R.drawable.previous, "Previous", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)))
+        builder.addAction(NotificationCompat.Action(R.drawable.pause, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
+        builder.addAction(NotificationCompat.Action(R.drawable.next, "Next", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)))
+
+        builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(1).setMediaSession(mMediaSessionCompat!!.sessionToken))
+        builder.setSmallIcon(R.drawable.launcher)
+        NotificationManagerCompat.from(this@Playback).notify(1, builder.build())
+    }
+
+    fun showPausedNotification() {
+        val builder = MediaStyleHelper.from(this, mMediaSessionCompat, getMetaData())
+        builder.addAction(NotificationCompat.Action(R.drawable.previous, "Previous", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)))
+        builder.addAction(NotificationCompat.Action(R.drawable.play, "Play", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
+        builder.addAction(NotificationCompat.Action(R.drawable.next, "Next", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)))
+        builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(1).setMediaSession(mMediaSessionCompat!!.sessionToken))
+        builder.setSmallIcon(R.drawable.launcher)
+        NotificationManagerCompat.from(this).notify(1, builder.build())
     }
 
     override fun onDestroy() {
@@ -343,8 +316,8 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         musicpausedposition = mMediaPlayer!!.currentPosition
         Log.i("PAUSED POSITION: ", "PAUSED POSITION: $musicpausedposition")
         mMediaPlayer!!.pause()
-        mMediaPlayer!!.reset()
-        mMediaPlayer!!.release()
+        setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
+        showPausedNotification()
         isPaused = true
 
     }
@@ -383,9 +356,6 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
         return Triple(musicartist, musictitle, artwork)
     }
 
-    fun getMediaPlayerInstance(): MediaPlayer? {
-        return mMediaPlayer
-    }
 
     fun clearPlaylist() {
         songlist.removeAll(songlist)
@@ -399,6 +369,7 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
                 releasePlayer()
                 setCurrentSong(currentIndexSongList)
                 setMusicPausedPosition(0)
+                isPaused = false
                 playSongs()
 
             }
@@ -412,12 +383,40 @@ class Playback : Service(), AudioManager.OnAudioFocusChangeListener {
             releasePlayer()
             setCurrentSong(currentIndexSongList)
             setMusicPausedPosition(0)
-                playSongs()
+            isPaused = false
+            playSongs()
         }
     }
 
     fun setPausedState(state: Boolean){
         isPaused = state
     }
+
+    fun getsSessionToken(): MediaSessionCompat.Token? {
+        return mMediaSessionCompat!!.sessionToken
+    }
+
+
+
+
+
+
+
+
+    @Nullable
+    fun onGetRoot(clientPackageName: String, clientUid: Int, @Nullable rootHints: Bundle): MediaBrowserService.BrowserRoot? {
+        return if (TextUtils.equals(clientPackageName, packageName)) {
+            MediaBrowserService.BrowserRoot(getString(R.string.app_name), null)
+        } else null
+
+    }
+
+    //Not important for general audio service, required for class
+    fun onLoadChildren(parentId: String, result: MediaBrowserService.Result<List<MediaBrowserCompat.MediaItem>>) {
+        result.sendResult(null)
+    }
+
+
+
 
 }
