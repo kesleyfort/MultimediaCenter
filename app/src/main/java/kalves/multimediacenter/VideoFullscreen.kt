@@ -143,7 +143,8 @@ class VideoFullscreen : AppCompatActivity() {
          */
         private val UI_ANIMATION_DELAY = 300
     }
-    fun playvideo(path: Uri?, position: Int){
+
+    fun playvideo(path: Uri?, position: Int) {
         var mediaController: MediaController? = null
         val videoplayer = findViewById<VideoView>(R.id.fullscreenVideoPlayer)
         try {

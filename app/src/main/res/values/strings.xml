@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MultimediaCenter</string>
+    <string name="app_name">MCenter</string>
     <string name="title_activity_settings">Settings</string>
 
     <!-- Strings related to Settings -->

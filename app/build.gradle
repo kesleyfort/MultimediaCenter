@@ -34,8 +34,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'com.google.android.exoplayer:exoplayer:2.7.3'
-    implementation 'com.obsez.android.lib.filechooser:filechooser:1.1.10'
-    implementation files('libs/YouTubeAndroidPlayerApi.jar')
     implementation 'com.github.wseemann:FFmpegMediaMetadataRetriever:1.0.14'
-    implementation 'com.wajahatkarim3.EasyFlipView:EasyFlipView:2.1.0'
+    // If you want to use the GPU Filters
+    implementation 'jp.co.cyberagent.android.gpuimage:gpuimage-library:1.4.1'
 }

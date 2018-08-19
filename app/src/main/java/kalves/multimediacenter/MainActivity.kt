@@ -1,110 +1,136 @@
 package kalves.multimediacenter
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Handler
-import android.preference.Preference
-import android.preference.SwitchPreference
-import android.provider.Settings.ACTION_BLUETOOTH_SETTINGS
-import android.provider.Settings.ACTION_WIFI_SETTINGS
+import android.os.IBinder
+import android.os.RemoteException
 import android.support.design.widget.BottomNavigationView
+import android.support.v4.content.ContextCompat
+import android.support.v4.graphics.drawable.DrawableCompat
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
+import android.view.WindowManager
+import android.view.animation.AnimationUtils
 import android.widget.*
 import kotlinx.android.synthetic.main.activity_main.*
 import wseemann.media.FFmpegMediaMetadataRetriever
-import android.widget.SeekBar
-
-
 
 
 class MainActivity : AppCompatActivity() {
+
     @SuppressLint("SetTextI18n")
     //Declare Variables
     private var mediaController: MediaController? = null
     private var fullscreenclicked: Boolean = false
+    private var isPaused: Boolean = false
     private var playervideoWidth: Int = 0
     private var playervideoHeigth: Int = 0
     private var mediaPlayer: MediaPlayer? = null
     private var selectfilesucess: Boolean = false
+    private var selectVideofilesucess: Boolean = false
     private var musicpausedposition: Int = 0
     private val musicSeekBarUpdateHandler = Handler()
-    private var songlist: MutableList<Uri?> = mutableListOf<Uri?>()
+    private var songlist: MutableList<Uri?> = mutableListOf()
+    private var videolist: MutableList<Uri?> = mutableListOf()
+    private var originalsonglist: MutableList<Uri?> = mutableListOf()
+    private var shuffledlist: MutableList<Uri?> = mutableListOf()
+    private var shuffleclicked: Boolean = false
+    private var repeatclicked: Boolean = false
     private var currentIndexSongList = 0
-    val mUpdateSeekbar = object : Runnable {
+    private var playlistclicked: Boolean = false
+    private var mMediaBrowserCompat: MediaBrowserCompat? = null
+    private var mMediaControllerCompat: MediaControllerCompat? = null
+    private val mUpdateSeekbar = object : Runnable {
         override fun run() {
-            musicseekBar.progress = mediaPlayer!!.getCurrentPosition()
-            musicSeekBarUpdateHandler.postDelayed(this, 500)
-            val currentposition = findViewById<TextView>(R.id.initialtimeMusic)
-            currentposition.text = ConvertMStoMinutes(mediaPlayer!!.currentPosition)
+            if(isPaused){
+                musicseekBar?.progress = myService!!.getPausedPosition()
+            }
+            else {
+                musicseekBar?.progress = myService!!.getCurrentPlaybackPosition()
+            }
+            initialtimeMusic.text = convertMStoMinutes(myService!!.getCurrentPlaybackPosition())
+            if (musicseekBar.progress == 0) {
+                finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
+            }
+                musicSeekBarUpdateHandler.postDelayed(this, 500)
         }
     }
-
-
-    //End Declare Variables
+    var myService: Playback? = null
+    var isBound = false
 
     private val mOnNavigationItemSelectedListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
         when (item.itemId) {
             R.id.nav_music -> {
-                //Make the views go away
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                music.visibility = View.VISIBLE
-                video.visibility = View.GONE
-                //end view
-
-                //Music Player
+                if(video_frame.visibility==View.VISIBLE) {
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    video_frame.visibility = View.GONE
+                    music_frame.visibility = View.VISIBLE
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
+                if(home_frame.visibility==View.VISIBLE) {
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    home_frame.visibility = View.GONE
+                    music_frame.visibility = View.VISIBLE
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
 
                 return@OnNavigationItemSelectedListener true
             }
             R.id.nav_video -> {
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                music.visibility = View.GONE
-                video.visibility = View.VISIBLE
+                if(music_frame.visibility==View.VISIBLE) {
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    music_frame.visibility = View.GONE
+                    video_frame.visibility = View.VISIBLE
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
+                if(home_frame.visibility==View.VISIBLE) {
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    home_frame.visibility = View.GONE
+                    video_frame.visibility = View.VISIBLE
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
+
+
                 return@OnNavigationItemSelectedListener true
             }
             R.id.nav_home -> {
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                music.visibility = View.GONE
-                video.visibility = View.GONE
+                if(video_frame.visibility==View.VISIBLE) {
+                    video_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    video_frame.visibility = View.GONE
+                    home_frame.visibility = View.VISIBLE
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
+                if(music_frame.visibility==View.VISIBLE) {
+                    music_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right))
+                    music_frame.visibility = View.GONE
+                    home_frame.visibility = View.VISIBLE
+                    home_frame.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left))
+                }
                 return@OnNavigationItemSelectedListener true
             }
             R.id.nav_settings -> {
-                /*                val settings = findViewById<FrameLayout>(R.id.settings_frame)
-                val music = findViewById<FrameLayout>(R.id.music_frame)
-                val video = findViewById<FrameLayout>(R.id.video_frame)
-                val spotify = findViewById<FrameLayout>(R.id.spotify_frame)
-                val deezer = findViewById<FrameLayout>(R.id.deezer_frame)
-                val switchBT = findViewById<Switch>(R.id.btswitch)
-                val switchWifi = findViewById<Switch>(R.id.wifiswitch)
-                val TextoWifi = findViewById<TextView>(R.id.wificonnectiontext)
-                val TextoBT = findViewById<TextView>(R.id.btconnectiontext)
-                val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                /*val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
                 if (mBluetoothAdapter != null) {
                     switchBT.isChecked = mBluetoothAdapter.isEnabled
                 }
                 val wifiManager = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 switchWifi.isChecked = wifiManager.isWifiEnabled
-                TextoWifi.text = "Connected to ${wifiManager.connectionInfo.ssid}"
-
-                music.visibility = View.GONE
-                video.visibility = View.GONE
-                spotify.visibility = View.GONE
-                deezer.visibility = View.GONE
-                settings.visibility = View.VISIBLE*/
-                startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                TextoWifi.text = "Connected to ${wifiManager.connectionInfo.ssid}"*/
+                startActivity(Intent(this@MainActivity, Settings::class.java))
                 return@OnNavigationItemSelectedListener true
             }
         }
@@ -115,16 +141,25 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
-        var playMusicbutton = findViewById<ImageView>(R.id.playMusicButton)
-        playMusicbutton.isClickable = false
         musicseekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser)
-                    if(mediaPlayer !=null)
-                    mediaPlayer!!.seekTo(progress)
+                if (fromUser){
+                    if (!myService!!.mediaPlayerIsNull())
+                    {
+                        if (!myService!!.mediaPlayerIsNull()) {
+                            if (isPaused) {
+                                myService!!.setMusicPausedPosition(progress)
+                                musicseekBar.progress = myService!!.getPausedPosition()
+                            } else {
+                                myService!!.setPositionFromSeekBar(progress)
+                                musicseekBar.progress = myService!!.getCurrentPlaybackPosition()
+                            }
+                        }
+                    }
+                }
             }
 
-           override fun onStartTrackingTouch(seekBar: SeekBar) {
+            override fun onStartTrackingTouch(seekBar: SeekBar) {
 
             }
 
@@ -132,100 +167,98 @@ class MainActivity : AppCompatActivity() {
 
             }
         })
+        //window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        musicPlaylist.setOnItemClickListener { adapterView, view, i, l ->
+            currentIndexSongList = i
+                if (myService!!.isMediaPlaying()) {
+                    myService!!.releasePlayer()
+                    myService!!.setCurrentSong(i)
+                    myService!!.setMusicPausedPosition(0)
+                    updateMetaData()
+                    myService!!.playSongs()
+                }
+                playMusicButton.visibility = View.GONE
+                pauseMusicButton.visibility = View.VISIBLE
+                runSeekBar()
+                finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
+                playlistclicked = false
 
-    }
+            }
+        val myConnection = object : ServiceConnection {
+            override fun onServiceConnected(className: ComponentName,
+                                            service: IBinder) {
+                val binder = service as Playback.MyLocalBinder
+                myService = binder.getService()
+                isBound = true
+            }
 
-    fun bluetoothSwitchOff() {
-        var REQUEST_ENABLE_BT = 1
-        val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (mBluetoothAdapter != null) {
-            if (mBluetoothAdapter.isEnabled) {
-                mBluetoothAdapter.disable()
+            override fun onServiceDisconnected(name: ComponentName) {
+                isBound = false
             }
         }
-    }
-
-    fun bluetoothSwitch() {
-        var REQUEST_ENABLE_BT = 1
-        val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (mBluetoothAdapter != null) {
-            if (!mBluetoothAdapter.isEnabled) {
-                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
-            }
-        }
-    }
-
-    fun wifiSwitch() {
-        val wifiManager = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiManager.isWifiEnabled = true
-    }
-
-    fun wifiSwitchOff() {
-        val wifiManager = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiManager.isWifiEnabled = false
-    }
-
-    fun onSwitchClicked(preference: Preference) {
-        //Is the switch on?
-        val on = (preference as SwitchPreference).isChecked
-
-        if (on) {
-            bluetoothSwitch()
-        } else {
-            bluetoothSwitchOff()
-        }
-    }
-
-    fun onSearchDevicesClicked(v: View) {
-        val intent = Intent(ACTION_BLUETOOTH_SETTINGS)
-        if (intent.resolveActivity(packageManager) != null) {
-            startActivity(intent)
-        }
-    }
-
-    fun onSearchWifiClicked(v: View) {
-        val intent = Intent(ACTION_WIFI_SETTINGS)
-        if (intent.resolveActivity(packageManager) != null) {
-            startActivity(intent)
-        }
-    }
-
-    fun onSwitchWifiClicked(v: View) {
-        val on = (v as SwitchPreference).isChecked
-
-        if (on) {
-            wifiSwitch()
-        } else {
-            wifiSwitchOff()
-        }
+        val intent = Intent(this, Playback::class.java)
+        bindService(intent, myConnection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == 111 && resultCode == RESULT_OK) {
-            for (i in 0 until data?.clipData!!.itemCount) {
-                val uri = data?.clipData?.getItemAt(i)?.uri
+        if (requestCode == 111 && resultCode == RESULT_OK && data != null) {
+            val clipdata = data.clipData
+            if (clipdata != null) {
+                for (i in 0 until data.clipData!!.itemCount) {
+                    val uri = data.clipData?.getItemAt(i)?.uri
+                    songlist.add(uri)
+
+                }
+            } else {
+                val uri = data.data
                 songlist.add(uri)
-
             }
-
             selectfilesucess = true
-            var playMusicbutton = findViewById<ImageView>(R.id.playMusicButton)
-            playMusicbutton.isClickable = true
+            updatePlaylist()
+            if(originalsonglist.isNotEmpty()){
+                originalsonglist.clear()
+            }
+            originalsonglist.addAll(songlist)
+            myService!!.createPlaylist(originalsonglist)
             updateMetaData()
+
+        }
+
+        if (requestCode == 112 && resultCode == RESULT_OK && data != null) {
+            val clipdata = data.clipData
+            if (clipdata != null) {
+                for (i in 0 until data.clipData!!.itemCount) {
+                    val uri = data.clipData?.getItemAt(i)?.uri
+                    videolist.add(uri)
+
+                }
+            } else {
+                val uri = data.data
+                videolist.add(uri)
+            }
+            selectVideofilesucess = true
+            playVideo(videolist[0])
         }
     }
 
+
+    fun runSeekBar(){
+        musicseekBar.max = myService!!.getDuration()
+        mUpdateSeekbar.run()
+    }
+
+
     fun onFileChooserClicked(v: View) {
         val intent = Intent()
-                .setType("video/*")
+                .setType("video_frame/*")
                 .setAction(Intent.ACTION_GET_CONTENT)
                 .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
 
-        startActivityForResult(Intent.createChooser(intent, "Select a file"), 111)
+        startActivityForResult(Intent.createChooser(intent, "Select a file"), 112)
     }
+
 
     fun onMusicFileChooserClicked(v: View) {
         val intent = Intent()
@@ -236,135 +269,84 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "Select a file"), 111)
     }
 
-    fun playMusic() {
-        if (selectfilesucess && musicpausedposition == 0) {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_MUSIC)
-                setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepare()
-                start()
-            }
-            var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-            var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-            var duration = findViewById<TextView>(R.id.finaltimeMusic)
-            playbutton.visibility = View.GONE
-            pausebutton.visibility = View.VISIBLE
-            duration.text = ConvertMStoMinutes(mediaPlayer!!.duration)
-            musicseekBar.max = mediaPlayer!!.duration
-
-        } else if (selectfilesucess && musicpausedposition != 0) {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioStreamType(AudioManager.STREAM_MUSIC)
-                setDataSource(applicationContext, songlist[currentIndexSongList])
-                prepare()
-                seekTo(musicpausedposition)
-                start()
-            }
-            musicseekBar.max = mediaPlayer!!.duration
-            val musicDuration = findViewById<TextView>(R.id.finaltimeMusic)
-            musicDuration.text = ConvertMStoMinutes(mediaPlayer!!.duration)
-            var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-            var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-            playbutton.visibility = View.GONE
-            pausebutton.visibility = View.VISIBLE
-        }
-        updateMetaData()
-
-
-        musicSeekBarUpdateHandler.postDelayed(mUpdateSeekbar, 0);
-        mediaPlayer!!.setOnCompletionListener {
-            if (currentIndexSongList < (songlist.size - 1)) {
-                currentIndexSongList += 1
-                playMusic()
-                //updateMetaData()
-                val musicdata = findViewById<TextView>(R.id.MusicData)
-                musicdata.text = "Index: $currentIndexSongList && List Size: ${songlist.size}"
-            }
-            else if (currentIndexSongList==(songlist.size - 1)) {
-                currentIndexSongList = 0
-                updateMetaData()
-                var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-                var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-                playbutton.visibility = View.VISIBLE
-                pausebutton.visibility = View.GONE
-
-            }
-        }
-
-    }
 
     fun onPlayMusicClicked(v: View) {
-        playMusic()
+        if (!myService!!.mediaPlayerIsNull() && songlist.isNotEmpty()) {
+            if(isPaused){
+                musicseekBar.progress = myService!!.getPausedPosition()
+                myService!!.setPausedState(isPaused)
+                myService!!.playSongs()
+            }
+            else{
+                myService!!.setPausedState(isPaused)
+                myService!!.playSongs()
+            }
+            playMusicButton.visibility = View.GONE
+            pauseMusicButton.visibility = View.VISIBLE
+            finaltimeMusic.text = convertMStoMinutes(myService!!.getSeekBarMaximum())
+            musicseekBar.max = myService!!.getSeekBarMaximum()
+            isPaused = false
+            initialtimeMusic.text = convertMStoMinutes(myService!!.getPausedPosition())
+            myService!!.showPlayingNotification()
+            musicseekBar.progress = 0
+            runSeekBar()
+        }
+
     }
 
     fun onPauseMusicClicked(v: View) {
-        if(mediaPlayer!!.isPlaying) {
-            mediaPlayer!!.pause()
+        isPaused = true
+        if (myService!!.isMediaPlaying()) {
+            myService!!.pauseMusic()
+            myService!!.setPausedState(isPaused)
             var playbutton = findViewById<ImageView>(R.id.playMusicButton)
             var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
             playbutton.visibility = View.VISIBLE
             pausebutton.visibility = View.GONE
-            musicpausedposition = mediaPlayer!!.currentPosition
-
-            musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar);
-
-            //musicSeekBarUpdateHandler.removeCallbacks();
+            musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar)
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            myService!!.showPausedNotification()
         }
     }
 
     fun onStopMusicClicked(v: View) {
-        if (mediaPlayer!=null) {
-            if (mediaPlayer!!.isPlaying) {
-                mediaPlayer!!.release()
-                musicpausedposition = 0
-                currentIndexSongList = 0
-                var playbutton = findViewById<ImageView>(R.id.playMusicButton)
-                var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
-                playbutton.visibility = View.VISIBLE
-                pausebutton.visibility = View.GONE
-            }
-        }
+        musicSeekBarUpdateHandler.removeCallbacks(mUpdateSeekbar)
+        myService!!.releasePlayer()
+        musicseekBar.progress = 0
+        MusicAlbumArt.setImageResource(R.drawable.nocoverart)
+        MusicData.text = " - "
+        initialtimeMusic.text = "00:00"
+        finaltimeMusic.text = "00:00"
+        var playbutton = findViewById<ImageView>(R.id.playMusicButton)
+        var pausebutton = findViewById<ImageView>(R.id.pauseMusicButton)
+        playbutton.visibility = View.VISIBLE
+        pausebutton.visibility = View.GONE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     fun onNextMusicClicked(v: View) {
-        if (currentIndexSongList < (songlist.size - 1)) {
-            currentIndexSongList += 1
-            mediaPlayer!!.release()
-            musicpausedposition = 0
-            updateMetaData()
-            playMusic()
-        }
+        myService!!.nextSong()
+        musicseekBar.max = myService!!.getDuration()
+        updateMetaData()
+        myService!!.showPlayingNotification()
+        musicseekBar.progress = 0
+        runSeekBar()
     }
 
     fun onPreviousMusicClicked(v: View) {
-        if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
-            currentIndexSongList -= 1
-            mediaPlayer!!.release()
-            musicpausedposition = 0
-            updateMetaData()
-            playMusic()
-        }
+        myService!!.previousSong()
+        musicseekBar.max = myService!!.getDuration()
+        updateMetaData()
+        myService!!.showPlayingNotification()
+        musicseekBar.progress = 0
+        runSeekBar()
     }
 
     fun updateMetaData() {
-        if (selectfilesucess && musicpausedposition == 0) {
-            try {
-                val mmr = FFmpegMediaMetadataRetriever()
-                mmr.setDataSource(applicationContext, songlist[currentIndexSongList])
-                var musictitle = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_TITLE)
-                var musicartist = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_ARTIST)
-                val b = mmr.getFrameAtTime(2000000, FFmpegMediaMetadataRetriever.OPTION_CLOSEST) // frame at 2 seconds
-                val artwork = mmr.embeddedPicture
-                val musicdata = findViewById<TextView>(R.id.MusicData)
-                musicdata.text = "$musictitle - $musicartist"
-                val image = BitmapFactory.decodeByteArray(artwork, 0, artwork.size)
-                val musicartwork = findViewById<ImageView>(R.id.MusicAlbumArt)
-                musicartwork.setImageBitmap(image)
-                mmr.release()
-            } catch (e: Exception) {
-                e.localizedMessage
-            }
-        }
+    val metadata = myService!!.getMetaData()
+        MusicData.text = "${metadata.second} - ${metadata.first}"
+        val image = BitmapFactory.decodeByteArray(metadata.third, 0, metadata.third.size)
+        MusicAlbumArt.setImageBitmap(image)
     }
 
     private fun playVideo(path: Uri?) {
@@ -402,13 +384,13 @@ class MainActivity : AppCompatActivity() {
                 playerVideo.layoutParams = params
             } else {
                 fullscreenclicked = false
-                var fullscreenbutton = findViewById<ImageView>(R.id.fullScreenMusicButton)
+                var fullscreenbutton = findViewById<ImageView>(R.id.fullscreenVideoButton)
                 fullscreenbutton.setImageResource(R.drawable.exo_controls_fullscreen_enter)
                 val metrics = DisplayMetrics()
                 windowManager.defaultDisplay.getMetrics(metrics)
                 val params = playerVideo.layoutParams as android.widget.RelativeLayout.LayoutParams
-                params.width = (playervideoWidth).toInt()
-                params.height = (playervideoHeigth).toInt()
+                params.width = (playervideoWidth)
+                params.height = (playervideoHeigth)
                 playerVideo.layoutParams = params
             }
         }
@@ -421,18 +403,119 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun ConvertMStoMinutes(milliseconds: Int): String {
-        val minutes = milliseconds / 1000 / 60
-        val seconds = milliseconds / 1000 % 60
-        return if(seconds<10){
-            "0$minutes:0$seconds"
-        }
-        else {
-            "0$minutes:$seconds"
+    fun onShuffleMusicClicked(v: View) {
+        if(selectfilesucess) {
+            if (!shuffleclicked) {
+                DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorAccent));
+                shuffleclicked = true
+                shuffleMusic()
+            } else {
+                DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorPrimary));
+                songlist.clear()
+                songlist.addAll(originalsonglist)
+                updatePlaylist()
+                myService!!.setCurrentSong(0)
+                updateMetaData()
+                if (!myService!!.mediaPlayerIsNull())
+                    myService!!.releasePlayer()
+                myService!!.playSongs()
+                shuffleclicked = false
+            }
         }
     }
 
+    fun onRepeatMusicClicked(v: View) {
+        if (!repeatclicked) {
+            DrawableCompat.setTint(repeatButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorAccent));
+            repeatclicked = true
+            myService!!.setRepeat(repeatclicked)
+        } else {
+            DrawableCompat.setTint(repeatButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorPrimary));
+            repeatclicked = false
+            myService!!.setRepeat(repeatclicked)
+        }
+    }
 
+    fun onPlaylistMusicClicked(v: View) {
+        if (!playlistclicked) {
+            MusicAlbumArt.animate().withLayer()
+                    .rotationY(90f)
+                    .setDuration(500)
+                    .withEndAction {
+                        run {
+
+                            musicPlaylist.visibility = View.VISIBLE
+                            MusicAlbumArt.visibility = View.GONE
+                            // second quarter turn
+                            MusicAlbumArt.rotationY = -90f
+                            MusicAlbumArt.animate().withLayer()
+                                    .rotationY(0f)
+                                    .setDuration(500)
+                                    .start()
+                        }
+                    }.start()
+            playlistclicked = true
+        } else {
+            musicPlaylist.animate().withLayer()
+                    .rotationY(90f)
+                    .setDuration(500)
+                    .withEndAction {
+                        run {
+                            MusicAlbumArt.visibility = View.VISIBLE
+                            musicPlaylist.visibility = View.GONE
+
+                            // second quarter turn
+                            musicPlaylist.rotationY = -90f
+                            musicPlaylist.animate().withLayer()
+                                    .rotationY(0f)
+                                    .setDuration(500)
+                                    .start()
+                        }
+                    }.start()
+            playlistclicked = false
+        }
+    }
+
+    private fun updatePlaylist() {
+
+        var songnames: MutableList<String> = mutableListOf()
+            for (i in 0 until songlist.size) {
+                val mmr = FFmpegMediaMetadataRetriever()
+                mmr.setDataSource(applicationContext, songlist[i])
+                var musictitle = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_TITLE)
+                var musicartist = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_ARTIST)
+                songnames.add("\"$musictitle\",\n$musicartist")
+
+            }
+            // Create an ArrayAdapter from List
+            val arrayAdapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, songnames)
+
+            // DataBind ListView with items from ArrayAdapter
+            musicPlaylist.adapter = arrayAdapter
+        }
+
+    private fun shuffleMusic(){
+        songlist.shuffle()
+        myService!!.clearPlaylist()
+        myService!!.createPlaylist(songlist)
+        if(!myService!!.mediaPlayerIsNull()) {
+            myService!!.releasePlayer()
+            myService!!.setMusicPausedPosition(0)
+            myService!!.setCurrentSong(0)
+            myService!!.playSongs()
+            updatePlaylist()
+        }
+    }
+
+    private fun convertMStoMinutes(milliseconds: Int): String {
+        val minutes = milliseconds / 1000 / 60
+        val seconds = milliseconds / 1000 % 60
+        return if (seconds < 10) {
+            "0$minutes:0$seconds"
+        } else {
+            "0$minutes:$seconds"
+        }
+    }
 
 }
 

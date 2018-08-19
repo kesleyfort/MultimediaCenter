@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "317564972484",
+    "firebase_url": "https://multimediacenter-f2278.firebaseio.com",
+    "project_id": "multimediacenter-f2278",
+    "storage_bucket": "multimediacenter-f2278.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:317564972484:android:e6516fb3b08432a1",
+        "android_client_info": {
+          "package_name": "kalves.multimediacenter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "317564972484-9pfhgr5gtc6fq93d682qn46kv86fi3km.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "kalves.multimediacenter",
+            "certificate_hash": "d2c863fe523f93d0fdd1924d9f2664faa356d10b"
+          }
+        },
+        {
+          "client_id": "317564972484-diadjv3624ihl9svc65q0i4jmm2gvb8p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAm0EbzwTUlzml6rEDbOhldWcaF88j_Irs"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "317564972484-diadjv3624ihl9svc65q0i4jmm2gvb8p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
