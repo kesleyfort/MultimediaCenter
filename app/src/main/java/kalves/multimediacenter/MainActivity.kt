@@ -60,6 +60,8 @@ class MainActivity : AppCompatActivity() {
             initialtimeMusic.text = convertMStoMinutes(myService!!.getCurrentPlaybackPosition())
             if (musicseekBar.progress == 0) {
                 finaltimeMusic.text = convertMStoMinutes(myService!!.getDuration())
+                musicseekBar.max = myService!!.getDuration()
+                updateMetaData()
             }
                 musicSeekBarUpdateHandler.postDelayed(this, 500)
         }
@@ -341,7 +343,7 @@ class MainActivity : AppCompatActivity() {
 
     fun updateMetaData() {
     val metadata = myService!!.getMetaData()
-        MusicData.text = "${metadata.second} - ${metadata.first}"
+        MusicData.text = "${metadata.second}\n${metadata.first}"
         val image = BitmapFactory.decodeByteArray(metadata.third, 0, metadata.third.size)
         MusicAlbumArt.setImageBitmap(image)
     }

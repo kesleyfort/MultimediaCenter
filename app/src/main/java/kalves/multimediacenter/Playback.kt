@@ -1,28 +1,27 @@
 package kalves.multimediacenter
 
-import android.annotation.TargetApi
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.*
-import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
-import android.os.*
+import android.os.Binder
+import android.os.Bundle
+import android.os.IBinder
+import android.os.PowerManager
 import android.service.media.MediaBrowserService
 import android.support.annotation.Nullable
 import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat
 import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.MediaBrowserServiceCompat
 import android.support.v4.media.session.MediaButtonReceiver
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import android.util.Log
 import wseemann.media.FFmpegMediaMetadataRetriever
-import android.support.v4.media.MediaBrowserServiceCompat;
-import android.support.v4.media.MediaMetadataCompat;
 
 
 class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeListener {
@@ -41,10 +40,9 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     private var currentIndexSongList = 0
     private var mMediaPlayer: MediaPlayer? = null
     private var songlist: MutableList<Uri?> = mutableListOf()
-    var musictitle: String = ""
-    var musicartist: String = ""
-    var artwork: ByteArray = byteArrayOf(0)
-    var notification: Unit? = null
+    private var musictitle: String = ""
+    private var musicartist: String = ""
+    private var artwork: ByteArray = byteArrayOf(0)
 
     private var mMediaSessionCompat: MediaSessionCompat? = null
     private val mNoisyReceiver = object : BroadcastReceiver() {
@@ -93,28 +91,16 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         }
 
         override fun onSkipToNext() {
-            Log.i("MediaSessionCalback", "ONSKIPTONEXT")
             super.onSkipToNext()
-            if (currentIndexSongList < (songlist.size - 1)) {
-                currentIndexSongList += 1
-                mMediaPlayer!!.stop()
-                musicpausedposition = 0
-                playSongs()
-                mMediaSessionCompat!!.isActive = true
-                showPlayingNotification()
-            }
+            nextSong()
+            showPlayingNotification()
 
         }
 
         override fun onSkipToPrevious() {
             super.onSkipToPrevious()
-            if (currentIndexSongList < songlist.size && currentIndexSongList > 0) {
-                currentIndexSongList -= 1
-                mMediaPlayer!!.release()
-                musicpausedposition = 0
-                playSongs()
-                showPlayingNotification()
-            }
+            previousSong()
+            showPlayingNotification()
         }
 
     }
@@ -241,7 +227,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
                 mMediaPlayer = MediaPlayer().apply {
                     setAudioStreamType(AudioManager.STREAM_MUSIC)
                     setDataSource(applicationContext, songlist[currentIndexSongList])
-                    prepare()
+                    prepareAsync()
                     setOnPreparedListener {
                         start()
                     }
@@ -249,6 +235,10 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
             }
             mMediaSessionCompat!!.isActive = true
             setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+            mMediaPlayer!!.setOnCompletionListener {
+                nextSong()
+                showPlayingNotification()
+            }
         }
     }
 
@@ -257,7 +247,6 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         builder.addAction(NotificationCompat.Action(R.drawable.previous, "Previous", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)))
         builder.addAction(NotificationCompat.Action(R.drawable.pause, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
         builder.addAction(NotificationCompat.Action(R.drawable.next, "Next", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)))
-
         builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0,1,2).setMediaSession(mMediaSessionCompat!!.sessionToken))
         builder.setSmallIcon(R.drawable.launcher)
         NotificationManagerCompat.from(this@Playback).notify(1, builder.build())
@@ -321,7 +310,6 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
 
     fun pauseMusic() {
         musicpausedposition = mMediaPlayer!!.currentPosition
-        Log.i("PAUSED POSITION: ", "PAUSED POSITION: $musicpausedposition")
         mMediaPlayer!!.pause()
         setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
         showPausedNotification()
@@ -401,6 +389,10 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
 
     fun setPausedState(state: Boolean){
         isPaused = state
+    }
+
+    fun getPlaylist(): MutableList<Uri?>{
+        return songlist
     }
 
 
