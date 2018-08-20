@@ -1,13 +1,11 @@
 package kalves.multimediacenter
 
 import android.annotation.SuppressLint
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
+import android.content.*
 import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.session.MediaSession
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -15,6 +13,7 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.content.ContextCompat
+import android.support.v4.content.LocalBroadcastManager
 import android.support.v4.graphics.drawable.DrawableCompat
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
@@ -42,18 +41,14 @@ class MainActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var selectfilesucess: Boolean = false
     private var selectVideofilesucess: Boolean = false
-    private var musicpausedposition: Int = 0
     private val musicSeekBarUpdateHandler = Handler()
     private var songlist: MutableList<Uri?> = mutableListOf()
     private var videolist: MutableList<Uri?> = mutableListOf()
     private var originalsonglist: MutableList<Uri?> = mutableListOf()
-    private var shuffledlist: MutableList<Uri?> = mutableListOf()
     private var shuffleclicked: Boolean = false
     private var repeatclicked: Boolean = false
     private var currentIndexSongList = 0
     private var playlistclicked: Boolean = false
-    private var mMediaBrowserCompat: MediaBrowserCompat? = null
-    private var mMediaControllerCompat: MediaControllerCompat? = null
     private val mUpdateSeekbar = object : Runnable {
         override fun run() {
             if(isPaused){
@@ -168,7 +163,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
         //window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        musicPlaylist.setOnItemClickListener { adapterView, view, i, l ->
+        musicPlaylist.setOnItemClickListener { _, _, i, l ->
             currentIndexSongList = i
                 if (myService!!.isMediaPlaying()) {
                     myService!!.releasePlayer()
@@ -211,14 +206,15 @@ class MainActivity : AppCompatActivity() {
                     songlist.add(uri)
 
                 }
-            } else {
+            }
+            else {
                 val uri = data.data
                 songlist.add(uri)
             }
             selectfilesucess = true
             updatePlaylist()
             if(originalsonglist.isNotEmpty()){
-                originalsonglist.clear()
+                originalsonglist.removeAll(originalsonglist)
             }
             originalsonglist.addAll(songlist)
             myService!!.createPlaylist(originalsonglist)
@@ -244,7 +240,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    fun runSeekBar(){
+    private fun runSeekBar(){
         musicseekBar.max = myService!!.getDuration()
         mUpdateSeekbar.run()
     }
@@ -271,7 +267,7 @@ class MainActivity : AppCompatActivity() {
 
 
     fun onPlayMusicClicked(v: View) {
-        if (!myService!!.mediaPlayerIsNull() && songlist.isNotEmpty()) {
+        if (songlist.isNotEmpty()) {
             if(isPaused){
                 musicseekBar.progress = myService!!.getPausedPosition()
                 myService!!.setPausedState(isPaused)
@@ -290,6 +286,7 @@ class MainActivity : AppCompatActivity() {
             myService!!.showPlayingNotification()
             musicseekBar.progress = 0
             runSeekBar()
+            updateMetaData()
         }
 
     }
@@ -411,7 +408,7 @@ class MainActivity : AppCompatActivity() {
                 shuffleMusic()
             } else {
                 DrawableCompat.setTint(shuffleMusicButton.drawable, ContextCompat.getColor(applicationContext, R.color.colorPrimary));
-                songlist.clear()
+                songlist.removeAll(songlist)
                 songlist.addAll(originalsonglist)
                 updatePlaylist()
                 myService!!.setCurrentSong(0)
@@ -504,6 +501,7 @@ class MainActivity : AppCompatActivity() {
             myService!!.setCurrentSong(0)
             myService!!.playSongs()
             updatePlaylist()
+            updateMetaData()
         }
     }
 
@@ -515,6 +513,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             "0$minutes:$seconds"
         }
+    }
+
+    private fun changeIcon(){
+        playMusicButton.visibility = View.VISIBLE
+        pauseMusicButton.visibility = View.GONE
     }
 
 }

@@ -97,9 +97,11 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
             super.onSkipToNext()
             if (currentIndexSongList < (songlist.size - 1)) {
                 currentIndexSongList += 1
-                mMediaPlayer!!.release()
+                mMediaPlayer!!.stop()
                 musicpausedposition = 0
                 playSongs()
+                mMediaSessionCompat!!.isActive = true
+                showPlayingNotification()
             }
 
         }
@@ -111,8 +113,10 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
                 mMediaPlayer!!.release()
                 musicpausedposition = 0
                 playSongs()
+                showPlayingNotification()
             }
         }
+
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -127,6 +131,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         initMediaSession()
         initNoisyReceiver()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
     }
 
 
@@ -135,6 +140,20 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         mMediaPlayer!!.setWakeMode(applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
         mMediaPlayer!!.setAudioStreamType(AudioManager.STREAM_MUSIC)
         mMediaPlayer!!.setVolume(1.0f, 1.0f)
+        mMediaPlayer!!.setOnCompletionListener {
+            if (currentIndexSongList < (songlist.size - 1)) {
+                currentIndexSongList += 1
+                playSongs()
+            } else if (currentIndexSongList == (songlist.size - 1)) {
+                if (repeatclicked) {
+                    currentIndexSongList = 0
+                    playSongs()
+                } else {
+                    currentIndexSongList = 0
+                }
+
+            }
+        }
     }
 
     private fun initMediaSession() {
@@ -197,9 +216,9 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     private fun setMediaPlaybackState(state: Int) {
         val playbackstateBuilder = PlaybackStateCompat.Builder()
         if (state == PlaybackStateCompat.STATE_PLAYING) {
-            playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_PAUSE)
+            playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_PAUSE or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
         } else {
-            playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_PLAY)
+            playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
         }
         playbackstateBuilder.setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
         mMediaSessionCompat!!.setPlaybackState(playbackstateBuilder.build())
@@ -209,6 +228,9 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     }
 
     fun playSongs() {
+        if(mMediaPlayer==null){
+            initMediaPlayer()
+        }
         if(isPaused) {
             mMediaPlayer!!.start()
             setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
@@ -219,7 +241,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
                 mMediaPlayer = MediaPlayer().apply {
                     setAudioStreamType(AudioManager.STREAM_MUSIC)
                     setDataSource(applicationContext, songlist[currentIndexSongList])
-                    prepareAsync()
+                    prepare()
                     setOnPreparedListener {
                         start()
                     }
@@ -227,21 +249,6 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
             }
             mMediaSessionCompat!!.isActive = true
             setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
-            mMediaPlayer!!.setOnCompletionListener {
-                if (currentIndexSongList < (songlist.size - 1)) {
-                    currentIndexSongList += 1
-                    playSongs()
-                } else if (currentIndexSongList == (songlist.size - 1)) {
-                    if (repeatclicked) {
-                        currentIndexSongList = 0
-                        playSongs()
-                    } else {
-                        currentIndexSongList = 0
-                    }
-
-                }
-            }
-
         }
     }
 
@@ -251,7 +258,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         builder.addAction(NotificationCompat.Action(R.drawable.pause, "Pause", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
         builder.addAction(NotificationCompat.Action(R.drawable.next, "Next", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)))
 
-        builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(1).setMediaSession(mMediaSessionCompat!!.sessionToken))
+        builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0,1,2).setMediaSession(mMediaSessionCompat!!.sessionToken))
         builder.setSmallIcon(R.drawable.launcher)
         NotificationManagerCompat.from(this@Playback).notify(1, builder.build())
     }
@@ -261,7 +268,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         builder.addAction(NotificationCompat.Action(R.drawable.previous, "Previous", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)))
         builder.addAction(NotificationCompat.Action(R.drawable.play, "Play", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE)))
         builder.addAction(NotificationCompat.Action(R.drawable.next, "Next", MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT)))
-        builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(1).setMediaSession(mMediaSessionCompat!!.sessionToken))
+        builder.setStyle(android.support.v4.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(0,1,2).setMediaSession(mMediaSessionCompat!!.sessionToken))
         builder.setSmallIcon(R.drawable.launcher)
         NotificationManagerCompat.from(this).notify(1, builder.build())
     }
@@ -327,8 +334,12 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     }
 
     fun releasePlayer() {
-        mMediaPlayer!!.stop()
-        mMediaPlayer!!.release()
+        if(mMediaPlayer!=null) {
+            mMediaPlayer!!.reset()
+            mMediaPlayer!!.stop()
+            mMediaPlayer!!.release()
+            mMediaPlayer = null
+        }
     }
 
     fun setMusicPausedPosition(position: Int) {
@@ -391,15 +402,6 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     fun setPausedState(state: Boolean){
         isPaused = state
     }
-
-    fun getsSessionToken(): MediaSessionCompat.Token? {
-        return mMediaSessionCompat!!.sessionToken
-    }
-
-
-
-
-
 
 
 

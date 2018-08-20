@@ -1,5 +1,6 @@
 package kalves.multimediacenter
 
+import android.content.BroadcastReceiver
 import android.content.res.Configuration
 import android.os.Bundle
 import android.preference.PreferenceActivity
