@@ -10,7 +10,6 @@
     tools:context=".MainActivity">
 
     <FrameLayout
-        android:id="@+id/music_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone">
@@ -24,7 +23,6 @@
                 android:layout_height="match_parent">
 
                 <ImageButton
-                    android:id="@+id/playlistButton"
                     android:layout_width="30dp"
                     android:layout_height="28dp"
                     android:layout_marginEnd="16dp"
@@ -36,13 +34,13 @@
                     app:layout_constraintBottom_toTopOf="@+id/musicseekBar"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="1.0"
-                    app:layout_constraintStart_toEndOf="@+id/MusicAlbumArt"
+                    app:layout_constraintStart_toEndOf="@+id/MusicCoverArtView"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintVertical_bias="0.0"
                     app:srcCompat="@drawable/playlist" />
 
                 <ImageView
-                    android:id="@+id/MusicAlbumArt"
+                    android:id="@+id/MusicCoverArtView"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
                     android:layout_marginBottom="32dp"
@@ -78,7 +76,6 @@
                     app:layout_constraintVertical_bias="0.0" />
 
                 <TextView
-                    android:id="@+id/MusicData"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -93,7 +90,6 @@
                     app:layout_constraintVertical_bias="1.0" />
 
                 <TextView
-                    android:id="@+id/initialtimeMusic"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="52dp"
@@ -284,7 +280,6 @@
     </FrameLayout>
 
     <FrameLayout
-        android:id="@+id/video_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="visible">
@@ -294,7 +289,6 @@
             android:layout_height="263dp">
 
             <ImageView
-                android:id="@+id/idlescreenVideo"
                 android:layout_width="fill_parent"
                 android:layout_height="match_parent"
                 android:scaleType="centerInside"
@@ -316,7 +310,6 @@
             android:layout_height="match_parent">
 
             <FrameLayout
-                android:id="@+id/selectFileFrame"
                 android:layout_width="350dp"
                 android:layout_height="29dp"
                 android:layout_marginBottom="8dp"
@@ -335,7 +328,6 @@
                     android:layout_height="match_parent">
 
                     <ImageView
-                        android:id="@+id/substitleSelectFile"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="80dp"
@@ -388,7 +380,6 @@
     </FrameLayout>
 
     <FrameLayout
-        android:id="@+id/home_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone">
@@ -396,7 +387,6 @@
     </FrameLayout>
 
     <android.support.design.widget.BottomNavigationView
-        android:id="@+id/navigation"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:background="?android:attr/windowBackground"

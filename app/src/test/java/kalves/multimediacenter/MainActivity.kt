@@ -20,14 +20,6 @@ import android.widget.*
 import kotlinx.android.synthetic.main.activity_main.*
 import wseemann.media.FFmpegMediaMetadataRetriever
 import android.widget.ArrayAdapter
-import java.util.*
-import java.util.Arrays.asList
-import kotlin.collections.ArrayList
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.opengl.ETC1.getHeight
-import android.support.v4.view.ViewCompat.animate
-import android.R.attr.translationY
 import android.view.animation.AnimationUtils
 
 
@@ -159,8 +151,8 @@ class MainActivity : AppCompatActivity() {
                 updateMetaData()
                 playMusic()
             }
-            MusicAlbumArt.animate().alpha(1.0f)
-            MusicAlbumArt.visibility = View.VISIBLE
+            MusicCoverArtView.animate().alpha(1.0f)
+            MusicCoverArtView.visibility = View.VISIBLE
             musicPlaylist.animate().alpha(0.0f)
             musicPlaylist.visibility = View.GONE
             playlistclicked = false
@@ -370,9 +362,9 @@ class MainActivity : AppCompatActivity() {
                 MusicData.text = "$musictitle - $musicartist"
                 val image = BitmapFactory.decodeByteArray(artwork, 0, artwork.size)
                 if (artwork == null) {
-                    MusicAlbumArt.setImageResource(R.drawable.nocoverart)
+                    MusicCoverArtView.setImageResource(R.drawable.nocoverart)
                 } else {
-                    MusicAlbumArt.setImageBitmap(image)
+                    MusicCoverArtView.setImageBitmap(image)
                 }
 
                 mmr.release()
@@ -466,17 +458,17 @@ class MainActivity : AppCompatActivity() {
 
     fun onPlaylistMusicClicked(v: View) {
         if (!playlistclicked) {
-            MusicAlbumArt.animate().withLayer()
+            MusicCoverArtView.animate().withLayer()
                     .rotationY(90f)
                     .setDuration(300)
                     .withEndAction {
                         run {
 
                             musicPlaylist.visibility = View.VISIBLE
-                            MusicAlbumArt.visibility = View.GONE
+                            MusicCoverArtView.visibility = View.GONE
                             // second quarter turn
-                            MusicAlbumArt.rotationY = -90f
-                            MusicAlbumArt.animate().withLayer()
+                            MusicCoverArtView.rotationY = -90f
+                            MusicCoverArtView.animate().withLayer()
                                     .rotationY(0f)
                                     .setDuration(300)
                                     .start()
@@ -489,7 +481,7 @@ class MainActivity : AppCompatActivity() {
                     .setDuration(500)
                     .withEndAction {
                         run {
-                            MusicAlbumArt.visibility = View.VISIBLE
+                            MusicCoverArtView.visibility = View.VISIBLE
                             musicPlaylist.visibility = View.GONE
 
                             // second quarter turn
