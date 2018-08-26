@@ -5,18 +5,18 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:visibility="visible"
-    android:animateLayoutChanges="true"
     tools:context=".MainActivity">
 
     <FrameLayout
+        android:id="@+id/music_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone">
+        android:visibility="visible">
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="281dp">
+            android:layout_height="426dp"
+            android:visibility="visible">
 
             <android.support.constraint.ConstraintLayout
                 android:layout_width="match_parent"
@@ -25,107 +25,65 @@
                 <ImageButton
                     android:layout_width="30dp"
                     android:layout_height="28dp"
-                    android:layout_marginEnd="16dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="12dp"
                     android:background="@android:color/transparent"
                     android:onClick="onPlaylistMusicClicked"
                     android:scaleType="fitXY"
-                    android:tint="@color/design_default_color_primary"
-                    app:layout_constraintBottom_toTopOf="@+id/musicseekBar"
+                    android:tint="@color/colorPrimaryDark"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="1.0"
-                    app:layout_constraintStart_toEndOf="@+id/MusicCoverArtView"
+                    app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0.0"
                     app:srcCompat="@drawable/playlist" />
 
                 <ImageView
                     android:id="@+id/MusicCoverArtView"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_marginBottom="32dp"
-                    android:layout_marginEnd="32dp"
-                    android:layout_marginStart="32dp"
-                    android:layout_marginTop="8dp"
-                    app:layout_constraintBottom_toTopOf="@+id/musicseekBar"
-                    app:layout_constraintDimensionRatio="w,1:1"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0.0"
-                    app:srcCompat="@drawable/nocoverart" />
-
-                <ListView
-                    android:id="@+id/musicPlaylist"
-                    style="@style/Widget.AppCompat.ListView"
                     android:layout_width="162dp"
                     android:layout_height="163dp"
                     android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@color/dark_variant"
-                    android:footerDividersEnabled="true"
-                    android:headerDividersEnabled="true"
-                    android:scrollbars="vertical"
-                    android:visibility="gone"
-                    app:layout_constraintBottom_toTopOf="@+id/musicseekBar"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0.0" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="-"
-                    android:textAlignment="center"
-                    android:textSize="18sp"
-                    app:layout_constraintBottom_toTopOf="@+id/musicseekBar"
+                    android:src="@drawable/nocoverart"
+                    app:layout_constraintBottom_toTopOf="@+id/musicData"
+                    app:layout_constraintDimensionRatio="w,1:1"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="0.501"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/musicPlaylist"
-                    app:layout_constraintVertical_bias="1.0" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0.00999999" />
 
                 <TextView
+                    android:id="@+id/musicData"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="52dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginTop="210dp"
-                    android:text="00:00"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toStartOf="@+id/musicseekBar"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <TextView
-                    android:id="@+id/finaltimeMusic"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="52dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="210dp"
-                    android:text="00:00"
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/abeezee"
+                    android:textAlignment="center"
+                    android:textSize="18sp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toEndOf="@+id/musicseekBar"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <SeekBar
-                    android:id="@+id/musicseekBar"
-                    android:layout_width="579dp"
-                    android:layout_height="43dp"
-                    android:layout_alignParentBottom="true"
-                    android:layout_alignParentEnd="true"
-                    android:visibility="visible"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.501"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0.85" />
+                    app:layout_constraintVertical_bias="0.42000002" />
+
+                <ListView
+                    android:id="@+id/musicPlaylist"
+                    android:layout_width="275dp"
+                    android:layout_height="275dp"
+                    android:layout_marginTop="44dp"
+                    android:background="@color/white"
+                    android:divider="?android:attr/dividerHorizontal"
+                    android:footerDividersEnabled="true"
+                    android:headerDividersEnabled="true"
+                    android:saveEnabled="true"
+                    android:scrollbars="vertical"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.505"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
             </android.support.constraint.ConstraintLayout>
 
@@ -140,138 +98,161 @@
                 android:layout_height="wrap_content"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="1.0"
+                app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.8">
+                app:layout_constraintVertical_bias="1.0">
 
                 <android.support.constraint.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
-                    <ImageView
-                        android:id="@+id/shuffleMusicButton"
-                        android:layout_width="60dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="24dp"
-                        android:background="@android:color/transparent"
-                        android:onClick="onShuffleMusicClicked"
-                        android:tint="@color/design_default_color_primary_dark"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toEndOf="@+id/nextmusicButton"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.728"
-                        app:srcCompat="@drawable/exo_controls_shuffle" />
-
-                    <ImageView
-                        android:id="@+id/playMusicButton"
-                        android:layout_width="70dp"
-                        android:layout_height="50dp"
-                        android:layout_marginBottom="80dp"
-                        android:layout_marginTop="8dp"
-                        android:background="@android:color/transparent"
-                        android:onClick="onPlayMusicClicked"
-                        android:tint="@color/design_default_color_primary_dark"
+                    <com.google.android.exoplayer2.ui.PlayerControlView
+                        android:id="@+id/PlayerControl"
+                        android:layout_width="match_parent"
+                        android:layout_height="150dp"
+                        android:visibility="visible"
+                        app:controller_layout_id="@layout/exo_player_control_view"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="0.0"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.96"
-                        app:srcCompat="@drawable/exo_controls_play" />
+                        app:layout_constraintVertical_bias="0.778">
 
-                    <ImageView
-                        android:id="@+id/pauseMusicButton"
-                        android:layout_width="70dp"
-                        android:layout_height="50dp"
-                        android:layout_marginBottom="80dp"
-                        android:layout_marginTop="8dp"
+                    </com.google.android.exoplayer2.ui.PlayerControlView>
+                    <!--<ImageView
+                        android:id="@+id/playMusicButton"
+                        android:layout_width="95dp"
+                        android:layout_height="76dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
                         android:background="@android:color/transparent"
-                        android:onClick="onPauseMusicClicked"
-                        android:tint="@color/design_default_color_primary_dark"
+                        android:onClick="onPlayMusicClicked"
+                        android:tint="@color/colorPrimaryDark"
                         android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.95"
+                        app:layout_constraintVertical_bias="0.797"
+                        app:srcCompat="@drawable/exo_controls_play" />
+
+                    <ImageView
+                        android:id="@+id/pauseMusicButton"
+                        android:layout_width="95dp"
+                        android:layout_height="76dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@android:color/transparent"
+                        android:onClick="onPauseMusicClicked"
+                        android:tint="@color/colorPrimaryDark"
+                        android:visibility="gone"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0.797"
                         app:srcCompat="@drawable/exo_controls_pause" />
 
                     <ImageView
                         android:id="@+id/nextmusicButton"
-                        android:layout_width="60dp"
-                        android:layout_height="40dp"
-                        android:layout_marginEnd="208dp"
+                        android:layout_width="50dp"
+                        android:layout_height="35dp"
+                        android:layout_marginStart="95dp"
                         android:background="@android:color/transparent"
                         android:onClick="onNextMusicClicked"
-                        android:tint="@color/design_default_color_primary_dark"
+                        android:tint="@color/colorPrimaryDark"
+                        android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/previousMusicButton"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.728"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_next" />
 
                     <ImageView
                         android:id="@+id/previousMusicButton"
-                        android:layout_width="60dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="208dp"
+                        android:layout_width="50dp"
+                        android:layout_height="35dp"
+                        android:layout_marginStart="83dp"
                         android:background="@android:color/transparent"
                         android:onClick="onPreviousMusicClicked"
-                        android:tint="@color/design_default_color_primary_dark"
+                        android:tint="@color/colorPrimaryDark"
+                        android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.728"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_previous" />
 
                     <ImageView
+                        android:id="@+id/shuffleMusicButton"
+                        android:layout_width="64dp"
+                        android:layout_height="35dp"
+                        android:layout_marginEnd="16dp"
+                        android:background="@android:color/transparent"
+                        android:onClick="onShuffleMusicClicked"
+                        android:tint="@color/colorPrimaryDark"
+                        android:visibility="gone"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0.779"
+                        app:srcCompat="@drawable/exo_controls_shuffle" />
+
+                    <ImageView
                         android:id="@+id/repeatButton"
-                        android:layout_width="60dp"
-                        android:layout_height="40dp"
-                        android:layout_marginEnd="24dp"
+                        android:layout_width="64dp"
+                        android:layout_height="35dp"
+                        android:layout_marginStart="16dp"
                         android:background="@android:color/transparent"
                         android:onClick="onRepeatMusicClicked"
-                        android:tint="@color/design_default_color_primary_dark"
+                        android:tint="@color/colorPrimaryDark"
+                        android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/previousMusicButton"
-                        app:layout_constraintHorizontal_bias="0.983"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.728"
+                        app:layout_constraintVertical_bias="0.779"
                         app:srcCompat="@drawable/exo_controls_repeat_all" />
 
                     <Button
-                        android:id="@+id/musicSelectFile"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="32dp"
+                        android:id="@+id/MusicSelectFile"
+                        android:layout_width="70dp"
+                        android:layout_height="35dp"
+                        android:layout_marginEnd="16dp"
                         android:layout_marginStart="8dp"
                         android:background="@android:color/transparent"
                         android:onClick="onMusicFileChooserClicked"
                         android:text="..."
-                        android:textAlignment="center"
-                        android:textColor="@color/design_default_color_primary_dark"
+                        android:textColor="@color/colorPrimaryDark"
+                        android:textSize="18sp"
                         android:textStyle="bold"
+                        android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="1.0"
                         app:layout_constraintStart_toEndOf="@+id/shuffleMusicButton"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.728" />
+                        app:layout_constraintVertical_bias="0.872" />
 
                     <Button
                         android:id="@+id/stopButton"
-                        android:layout_width="60dp"
-                        android:layout_height="40dp"
-                        android:layout_marginEnd="28dp"
+                        android:layout_width="70dp"
+                        android:layout_height="35dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="16dp"
                         android:background="@android:color/transparent"
                         android:onClick="onStopMusicClicked"
                         android:text="Stop"
-                        android:textColor="@color/design_default_color_primary_dark"
+                        android:textColor="@color/colorPrimaryDark"
+                        android:visibility="gone"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/repeatButton"
+                        app:layout_constraintEnd_toStartOf="@+id/musicSelectFile"
+                        app:layout_constraintHorizontal_bias="0.0"
+                        app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.728" />
-
+                        app:layout_constraintVertical_bias="0.872" />
+-->
                 </android.support.constraint.ConstraintLayout>
 
             </RelativeLayout>
@@ -280,13 +261,14 @@
     </FrameLayout>
 
     <FrameLayout
+        android:id="@+id/video_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="visible">
+        android:visibility="gone">
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="263dp">
+            android:layout_height="281dp">
 
             <ImageView
                 android:layout_width="fill_parent"
@@ -328,49 +310,44 @@
                     android:layout_height="match_parent">
 
                     <ImageView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="80dp"
-                        android:background="@android:color/transparent"
-                        android:tint="@color/design_default_color_primary_dark"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/fullscreenVideoButton"
-                        app:layout_constraintHorizontal_bias="1.0"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_bias="0.0"
-                        app:srcCompat="@drawable/subtitles" />
-
-                    <ImageView
                         android:id="@+id/fullscreenVideoButton"
-                        android:layout_width="wrap_content"
+                        android:layout_width="89dp"
                         android:layout_height="wrap_content"
-                        android:background="@android:color/transparent"
+                        android:layout_marginEnd="8dp"
+                        android:background="@color/design_default_color_primary"
                         android:onClick="onFullScreenClicked"
-                        android:tint="@color/design_default_color_primary_dark"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/videoSelectFile"
-                        app:layout_constraintHorizontal_bias="0.993"
+                        app:layout_constraintEnd_toStartOf="@+id/stopButton"
+                        app:layout_constraintHorizontal_bias="1.0"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintVertical_bias="0.0"
                         app:srcCompat="@drawable/exo_controls_fullscreen_enter" />
 
                     <Button
-                        android:id="@+id/videoSelectFile"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:background="@android:color/transparent"
+                        android:id="@+id/musicSelectFile"
+                        android:layout_width="115dp"
+                        android:layout_height="30dp"
+                        android:background="@color/design_default_color_primary"
                         android:onClick="onFileChooserClicked"
-                        android:text="..."
-                        android:textColor="@color/design_default_color_primary_dark"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
+                        android:text="Select file"
+                        android:textColor="@android:color/white"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+                        app:layout_constraintHorizontal_bias="0.769"
+                        app:layout_constraintStart_toEndOf="@+id/playerVideo" />
 
+                    <Button
+                        android:id="@+id/stopButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@color/design_default_color_primary"
+                        android:onClick="onStopVideoClicked"
+                        android:text="Stop"
+                        android:textColor="@android:color/white"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/musicSelectFile" />
                 </android.support.constraint.ConstraintLayout>
 
             </FrameLayout>
@@ -380,13 +357,28 @@
     </FrameLayout>
 
     <FrameLayout
+        android:id="@+id/home_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone">
 
     </FrameLayout>
 
+    <FrameLayout
+        android:id="@+id/library_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <fragment
+            android:id="@+id/fragment"
+            android:name="kalves.multimediacenter.Library"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
     <android.support.design.widget.BottomNavigationView
+        android:id="@+id/navigation"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:background="?android:attr/windowBackground"

@@ -32,10 +32,12 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.ui.PlayerNotificationManager.MediaDescriptionAdapter
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
+import org.jetbrains.anko.coroutines.experimental.bg
+import org.jetbrains.anko.doAsync
 import wseemann.media.FFmpegMediaMetadataRetriever
 
 
-class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeListener, MediaDescriptionAdapter {
+class Playback : MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeListener, MediaDescriptionAdapter {
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? {
         return null
     }
@@ -44,9 +46,6 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
         return p1 as Unit
     }
 
-    override fun startForegroundService(service: Intent?): ComponentName? {
-        return super.startForegroundService(service)
-    }
     override fun createCurrentContentIntent(player: Player?): PendingIntent? {
         var window = mediaPlayer?.currentWindowIndex
         val intent = Intent(this, MainActivity::class.java)
@@ -68,12 +67,19 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     }
 
     override fun getCurrentLargeIcon(player: Player?, callback: PlayerNotificationManager.BitmapCallback?): Bitmap? {
-        val mmr = FFmpegMediaMetadataRetriever()
-        mmr.setDataSource(applicationContext, songlist[currentindex])
-        var artwork = mmr.embeddedPicture
-        mmr.release()
-        val image = BitmapFactory.decodeByteArray(artwork, 0, artwork.size)
-        return image
+        var returnimage: Bitmap? = null
+        try {
+            val mmr = FFmpegMediaMetadataRetriever()
+            mmr.setDataSource(applicationContext, songlist[currentindex])
+            var artwork = mmr.embeddedPicture
+            mmr.release()
+            val image = BitmapFactory.decodeByteArray(artwork, 0, artwork.size)
+            returnimage = image
+            return image
+        } catch (e: Exception) {
+            Log.e("Exception", e.localizedMessage)
+        }
+        return returnimage
     }
 
     //Variables
@@ -83,7 +89,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     private val mNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (mediaPlayer != null) {
-                //mediaPlayer?.pause()
+                mediaPlayer?.playWhenReady = false
             }
         }
     }
@@ -91,8 +97,6 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
     var currentindex = 0
     var musiclist = ConcatenatingMediaSource()
     var mediaplaylistcreated: Boolean = false
-    var AVRCP_PLAYSTATE_CHANGED = "com.android.music.playstatechanged";
-    var AVRCP_META_CHANGED = "com.android.music.metachanged";
     //end of variables
     //Initiate Binder to bind the service to the app
     private val myBinder = MyLocalBinder()
@@ -106,6 +110,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
             return this@Playback
         }
     }
+
     //end of Binder
     private val mMediaSessionCallback = object : MediaSessionCompat.Callback() {
 
@@ -114,7 +119,7 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
             mediaPlayer?.playWhenReady = true
             mediaPlayer?.playbackState
             setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING)
-            bluetoothNotifyChange(AVRCP_PLAYSTATE_CHANGED)
+            bluetoothNotifyChange()
         }
 
         override fun onPause() {
@@ -122,50 +127,54 @@ class Playback :  MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeLi
             mediaPlayer?.playWhenReady = false
             mediaPlayer?.playbackState
             setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
-            bluetoothNotifyChange(AVRCP_PLAYSTATE_CHANGED)
+            bluetoothNotifyChange()
         }
 
         override fun onSkipToNext() {
             super.onSkipToNext()
-            if(mediaPlayer!!.nextWindowIndex < musiclist.size-1) {
+            if (mediaPlayer!!.nextWindowIndex < musiclist.size - 1) {
                 currentindex = mediaPlayer!!.nextWindowIndex
                 mediaPlayer?.seekTo(mediaPlayer!!.nextWindowIndex, 0)
-                bluetoothNotifyChange(AVRCP_META_CHANGED)
+                bluetoothNotifyChange()
             }
         }
 
         override fun onSkipToPrevious() {
             super.onSkipToPrevious()
-            if(mediaPlayer!!.previousWindowIndex > 1) {
+            if (mediaPlayer!!.previousWindowIndex > 1) {
                 currentindex = mediaPlayer!!.previousWindowIndex
                 mediaPlayer?.seekTo(mediaPlayer!!.previousWindowIndex, 0)
-                bluetoothNotifyChange(AVRCP_META_CHANGED)
+                bluetoothNotifyChange()
             }
         }
     }
-fun bluetoothNotifyChange(what: String) {
-    var metada =
-            MediaMetadataCompat.Builder()
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, getTrackName())
-                    .putString(MediaMetadata.METADATA_KEY_ARTIST, getArtistName())
-                    .putString(MediaMetadata.METADATA_KEY_ALBUM, getAlbumName())
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, mediaPlayer!!.duration)
-                    .build()
-    mMediaSessionCompat?.setMetadata(metada)
-}
-    fun getArtistName(): String{
+
+    fun bluetoothNotifyChange() {
+        var metada =
+                MediaMetadataCompat.Builder()
+                        .putString(MediaMetadata.METADATA_KEY_TITLE, getTrackName())
+                        .putString(MediaMetadata.METADATA_KEY_ARTIST, getArtistName())
+                        .putString(MediaMetadata.METADATA_KEY_ALBUM, getAlbumName())
+                        .putLong(MediaMetadata.METADATA_KEY_DURATION, mediaPlayer!!.duration)
+                        .build()
+        mMediaSessionCompat?.setMetadata(metada)
+    }
+
+    private fun getArtistName(): String {
         val mmr = FFmpegMediaMetadataRetriever()
         mmr.setDataSource(applicationContext, songlist[currentindex])
         var musicArtist = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_ARTIST)
         return musicArtist
     }
-    fun getTrackName(): String{
+
+    private fun getTrackName(): String {
         val mmr = FFmpegMediaMetadataRetriever()
         mmr.setDataSource(applicationContext, songlist[currentindex])
         var musicTitle = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_TITLE)
         return musicTitle
     }
-    fun getAlbumName(): String{
+
+    private fun getAlbumName(): String {
         val mmr = FFmpegMediaMetadataRetriever()
         mmr.setDataSource(applicationContext, songlist[currentindex])
         var musicAlbum = mmr.extractMetadata(FFmpegMediaMetadataRetriever.METADATA_KEY_ALBUM)
@@ -222,57 +231,71 @@ fun bluetoothNotifyChange(what: String) {
 
         return result == AudioManager.AUDIOFOCUS_GAIN
     }
-    fun createMediaSourcePlaylist(uri: MutableList<Uri?>) {
-        songlist.addAll(uri)
-        var mediasourcelist: MutableList<MediaSource> = mutableListOf()
-        val userAgent = Util.getUserAgent(baseContext, "ExoPlayer")
-        if (mediaplaylistcreated) {
-            for (i in musiclist.size until uri.size) {
-                mediasourcelist.add(ExtractorMediaSource(uri[i],
-                        DefaultDataSourceFactory(baseContext, userAgent),
-                        DefaultExtractorsFactory(), null, null))
-            }
-            for (i in 0 until (mediasourcelist.size)) {
-                musiclist.addMediaSource(mediasourcelist[i])
-            }
-        } else {
-            for (i in 0 until uri.size) {
-                mediasourcelist.add(ExtractorMediaSource(uri[i],
-                        DefaultDataSourceFactory(baseContext, userAgent),
-                        DefaultExtractorsFactory(), null, null))
 
+    fun createMediaSourcePlaylist(uri: MutableList<Uri?>) {
+        doAsync {
+            songlist.addAll(uri)
+            var mediasourcelist: MutableList<MediaSource> = mutableListOf()
+            val userAgent = Util.getUserAgent(baseContext, "ExoPlayer")
+            if (mediaplaylistcreated) {
+                for (i in musiclist.size until uri.size) {
+                    mediasourcelist.add(ExtractorMediaSource(uri[i],
+                            DefaultDataSourceFactory(baseContext, userAgent),
+                            DefaultExtractorsFactory(), null, null))
+                }
+                for (i in 0 until (mediasourcelist.size)) {
+                    musiclist.addMediaSource(mediasourcelist[i])
+                }
+            } else {
+                for (i in 0 until uri.size) {
+                    mediasourcelist.add(ExtractorMediaSource(uri[i],
+                            DefaultDataSourceFactory(baseContext, userAgent),
+                            DefaultExtractorsFactory(), null, null))
+
+                }
+                for (i in 0 until (mediasourcelist.size)) {
+                    musiclist.addMediaSource(mediasourcelist[i])
+                }
             }
-            for (i in 0 until (mediasourcelist.size)) {
-                musiclist.addMediaSource(mediasourcelist[i])
+        }
+
+    }
+
+    private fun initNotifications() {
+        var playerNotificationManager = PlayerNotificationManager(
+                this,
+                "MultimediaCenter",
+                1,
+                this).apply {
+            setPlayer(mediaPlayer)
+            setSmallIcon(R.drawable.launcher)
+            setRewindIncrementMs(0)
+            setFastForwardIncrementMs(0)
+            setOngoing(true)
+        }
+    }
+
+    private fun destroyNotifications() {
+        var playerNotificationManager = PlayerNotificationManager(
+                this,
+                "MultimediaCenter",
+                1,
+                this).apply {
+            setPlayer(null)
+        }
+    }
+
+    fun playMusic() {
+        doAsync {
+            bg {
+                mediaPlayer?.prepare(musiclist)
+                mMediaSessionCompat!!.isActive = true
+                setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
             }
         }
     }
-    private fun initNotifications(){
-        var playerNotificationManager = PlayerNotificationManager(
-                this,
-                "",
-                1,
-                this)
-        playerNotificationManager.setPlayer(mediaPlayer)
-        playerNotificationManager.setSmallIcon(R.drawable.launcher)
-        playerNotificationManager.setRewindIncrementMs(0)
-        playerNotificationManager.setFastForwardIncrementMs(0)
-        playerNotificationManager.setOngoing(true)
-    }
-    private fun destroyNotifications(){
-        var playerNotificationManager = PlayerNotificationManager(
-                this,
-                "",
-                1,
-                this)
-        playerNotificationManager.setPlayer(null)
-    }
-    fun playMusic() {
-        mediaPlayer?.prepare(musiclist)
-        mMediaSessionCompat!!.isActive = true
-        setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED)
-    }
-    private fun onListener(){
+
+    private fun onListener() {
         mediaPlayer?.addListener(object : Player.DefaultEventListener() {
             override fun onPlayerStateChanged(
                     playWhenReady: Boolean, playbackState: Int) {
@@ -284,7 +307,7 @@ fun bluetoothNotifyChange(what: String) {
                     Player.STATE_BUFFERING -> {
                     }
                     Player.STATE_READY -> {
-                        bluetoothNotifyChange("")
+                        bluetoothNotifyChange()
                     }
                     Player.STATE_ENDED -> {
                     }
@@ -300,17 +323,24 @@ fun bluetoothNotifyChange(what: String) {
 
             override fun onPositionDiscontinuity(reason: Int) {
                 super.onPositionDiscontinuity(reason)
-                if(reason==Player.DISCONTINUITY_REASON_PERIOD_TRANSITION) {
+                if (reason == Player.DISCONTINUITY_REASON_PERIOD_TRANSITION) {
                     Log.i("DISCONTINUITY", "DISCONTINUITY_REASON_PERIOD_TRANSITION")
-                    currentindex = mediaPlayer!!.currentPeriodIndex
+                    Log.i("CurrentWIndowIndex", mediaPlayer!!.currentWindowIndex.toString())
+                    Log.i("CurrentPeriodoIndex", mediaPlayer!!.currentPeriodIndex.toString())
+                    Log.i("CurrentTimeline", mediaPlayer!!.currentTimeline.toString())
+                    Log.i("CurrentAdGroupIndex", mediaPlayer!!.currentAdGroupIndex.toString())
+                    currentindex = mediaPlayer!!.currentWindowIndex
+                    getCurrentContentTitle(mediaPlayer)
+                    getCurrentContentText(mediaPlayer)
                 }
             }
         })
     }
+
     override fun onAudioFocusChange(focusChange: Int) {
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS -> {
-                    mediaPlayer?.stop()
+                mediaPlayer?.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 mediaPlayer?.playWhenReady = false
@@ -328,6 +358,7 @@ fun bluetoothNotifyChange(what: String) {
             }
         }
     }
+
     private fun setMediaPlaybackState(state: Int) {
         val playbackstateBuilder = PlaybackStateCompat.Builder()
         if (state == PlaybackStateCompat.STATE_PLAYING) {
@@ -338,6 +369,7 @@ fun bluetoothNotifyChange(what: String) {
         playbackstateBuilder.setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
         mMediaSessionCompat!!.setPlaybackState(playbackstateBuilder.build())
     }
+
     override fun onDestroy() {
         super.onDestroy()
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
